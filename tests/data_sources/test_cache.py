@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-import hiero_analytics.data_sources.cache as cache
+import hiero_analytics.data_sources.archived.cache as cache
 
 
 @pytest.fixture

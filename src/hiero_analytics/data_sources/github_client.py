@@ -1,69 +1,125 @@
 """
-GitHubClient is a simple wrapper around the GitHub API that handles authentication and rate limiting.
+Low-level GitHub HTTP client.
+
+Handles authentication, connection reuse, rate limiting, and request execution
+for both REST and GraphQL GitHub API calls.
 """
+
 from __future__ import annotations
 
-import os
 import time
 from typing import Any
 
 import requests
-from dotenv import load_dotenv
 
 from hiero_analytics.config.github import (
+    BASE_URL,
     HTTP_TIMEOUT_SECONDS,
     REQUEST_DELAY_SECONDS,
+    github_headers,
 )
-
-load_dotenv()
 
 
 class GitHubClient:
-
-    BASE_URL = "https://api.github.com"
+    """HTTP client for interacting with the GitHub API."""
 
     def __init__(self) -> None:
-        token = os.getenv("GITHUB_TOKEN")
+        """
+        Initialize the client with a persistent HTTP session and
+        authentication headers from configuration.
+        """
 
-        self.headers = {
-            "Authorization": f"Bearer {token}"
-        } if token else {}
+        headers = github_headers()
 
-    def get(self, url: str) -> Any:
+        # Reusable session for connection pooling
+        self.session = requests.Session()
+        self.session.headers.update(headers)
 
-        r = requests.get(
-            url,
-            headers=self.headers,
-            timeout=HTTP_TIMEOUT_SECONDS,
-        )
+    # --------------------------------------------------------
+    # INTERNAL HELPERS
+    # --------------------------------------------------------
 
-        remaining = int(r.headers.get("X-RateLimit-Remaining", "1"))
-        reset = int(r.headers.get("X-RateLimit-Reset", "0"))
+    def _handle_rate_limit(self, response: requests.Response) -> None:
+        """
+        Check GitHub rate limit headers and sleep if necessary.
+
+        GitHub provides:
+            X-RateLimit-Remaining
+            X-RateLimit-Reset
+        """
+
+        remaining = int(response.headers.get("X-RateLimit-Remaining", "1"))
+        reset = int(response.headers.get("X-RateLimit-Reset", "0"))
 
         if remaining <= 0:
-            wait = max(0, reset - int(time.time()))
-            time.sleep(wait)
+            wait_seconds = max(0, reset - int(time.time()))
+            time.sleep(wait_seconds)
 
-            r = requests.get(
-                url,
-                headers=self.headers,
-                timeout=HTTP_TIMEOUT_SECONDS,
-            )
+    def _request(self, method: str, url: str, **kwargs: Any) -> Any:
+        """
+        Execute an HTTP request with rate limiting and retry delay.
 
-        time.sleep(REQUEST_DELAY_SECONDS)
+        Args:
+            method: HTTP method ("GET", "POST", etc.)
+            url: Target URL
+            **kwargs: Additional parameters passed to requests
 
-        r.raise_for_status()
-        return r.json()
+        Returns:
+            Parsed JSON response
+        """
 
-    def graphql(self, query: str, variables: dict[str, Any]) -> Any:
-
-        r = requests.post(
-            f"{self.BASE_URL}/graphql",
-            json={"query": query, "variables": variables},
-            headers=self.headers,
+        response = self.session.request(
+            method,
+            url,
             timeout=HTTP_TIMEOUT_SECONDS,
+            **kwargs,
         )
 
-        r.raise_for_status()
+        self._handle_rate_limit(response)
 
-        return r.json()
+        # Small delay to avoid aggressive API usage
+        time.sleep(REQUEST_DELAY_SECONDS)
+
+        response.raise_for_status()
+
+        return response.json()
+
+    # --------------------------------------------------------
+    # PUBLIC API METHODS
+    # --------------------------------------------------------
+
+    def get(self, url: str) -> Any:
+        """
+        Execute a GET request to a GitHub REST endpoint.
+
+        Args:
+            url: Full GitHub API URL
+
+        Returns:
+            Parsed JSON response
+        """
+
+        return self._request("GET", url)
+
+    def graphql(self, query: str, variables: dict[str, Any]) -> Any:
+        """
+        Execute a GraphQL query against the GitHub API.
+
+        Args:
+            query: GraphQL query string
+            variables: Variables passed to the query
+
+        Returns:
+            Parsed JSON response
+        """
+
+        payload = {
+            "query": query,
+            "variables": variables,
+        }
+
+        return self._request(
+            "POST",
+            f"{BASE_URL}/graphql",
+            json=payload,
+        )

@@ -14,16 +14,27 @@ def search_issues(
     client: GitHubClient,
     query: str,
 ) -> List[Dict[str, Any]]:
+    """
+    Search GitHub issues and pull requests using the REST search API.
+    
+    Args:
+        client: Authenticated GitHub client.
+        query: GitHub search query string.
 
-    def page(p: int):
+    Returns:
+        A list of search result objects from the GitHub API.
+    """
+
+    def page(page_number: int) -> list[dict[str, Any]]:
 
         url = (
             f"https://api.github.com/search/issues"
-            f"?q={query}&per_page=100&page={p}"
+            f"?q={query}&per_page=100&page={page_number}"
         )
 
         data = client.get(url)
+        items = data.get("items", [])
 
-        return data.get("items", [])
+        return [item for item in items if isinstance(item, dict)]
 
     return paginate_page_number(page)

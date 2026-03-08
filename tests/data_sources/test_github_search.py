@@ -1,6 +1,6 @@
 from unittest.mock import Mock
 
-import hiero_analytics.data_sources.github_search as github_search
+import hiero_analytics.data_sources.archived.github_search as github_search
 
 
 def test_search_issues_returns_items(monkeypatch):

@@ -1,0 +1,308 @@
+"""
+GitHub data ingestion utilities using the GraphQL API.
+
+This module provides functions for retrieving repositories, issues, and
+merged pull request metadata from GitHub. Data is fetched using cursor-
+based pagination and can be aggregated across an organization with
+parallel requests to improve ingestion speed.
+"""
+
+from __future__ import annotations
+from datetime import datetime
+
+from typing import List
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+from .github_client import GitHubClient
+from .pagination import paginate_cursor
+from .github_queries import (
+    REPOS_QUERY,
+    ISSUES_QUERY,
+    MERGED_PR_QUERY,
+)
+from .models import (
+    RepositoryRecord,
+    IssueRecord,
+    PullRequestDifficultyRecord,
+)
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+def _parse_dt(value: str | None) -> datetime | None:
+    if value is None:
+        return None
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+# --------------------------------------------------------
+# FETCH REPOSITORIES
+# --------------------------------------------------------
+
+def fetch_org_repos_graphql(
+    client: GitHubClient,
+    org: str,
+) -> List[RepositoryRecord]:
+    """
+    Fetch all repository full names for an organization using GraphQL.
+
+    Args:
+        client: Authenticated GitHub client.
+        org: GitHub organization name.
+
+    Returns:
+        A list of repository full names, for example:
+        ["hiero-ledger/analytics", "hiero-ledger/sdk"]
+    """
+    def page(cursor: str | None) -> tuple[list[RepositoryRecord], str | None, bool]:
+        data = client.graphql(
+            REPOS_QUERY,
+            {"org": org, "cursor": cursor},
+        )
+
+        repo_data = data["data"]["organization"]["repositories"]
+
+        items = [
+            RepositoryRecord(
+                full_name=f"{org}/{repo['name']}",
+                name=repo["name"],
+                owner=org,
+            )
+            for repo in repo_data["nodes"]
+        ]
+
+        next_cursor = repo_data["pageInfo"]["endCursor"]
+        has_next = repo_data["pageInfo"]["hasNextPage"]
+
+        return items, next_cursor, has_next
+
+    return paginate_cursor(page)
+
+
+# --------------------------------------------------------
+# FETCH ISSUES FOR ONE REPOSITORY
+# --------------------------------------------------------
+
+def fetch_repo_issues_graphql(
+    client: GitHubClient,
+    owner: str,
+    repo: str,
+) -> List[IssueRecord]:
+    """
+    Fetch all issues for a repository using GraphQL.
+
+    Args:
+        client: Authenticated GitHub client.
+        owner: Repository owner or organization name.
+        repo: Repository name only, not full_name.
+
+    Returns:
+        A list of normalized issue records.
+    """
+    def page(cursor: str | None) -> tuple[list[IssueRecord], str | None, bool]:
+
+        data = client.graphql(
+            ISSUES_QUERY,
+            {
+                "owner": owner,
+                "repo": repo,
+                "cursor": cursor,
+            },
+        )
+
+        issue_data = data["data"]["repository"]["issues"]
+
+        items = [
+            IssueRecord(
+                repo=f"{owner}/{repo}",
+                number=issue["number"],
+                title=issue["title"],
+                state=issue["state"],
+                created_at=_parse_dt(issue["createdAt"]), #type: ignore
+                closed_at=_parse_dt(issue["closedAt"]), #type: ignore
+                labels=[label["name"].lower() for label in issue["labels"]["nodes"]],
+            )
+            for issue in issue_data["nodes"]
+        ]
+
+        next_cursor = issue_data["pageInfo"]["endCursor"]
+        has_next = issue_data["pageInfo"]["hasNextPage"]
+
+        return items, next_cursor, has_next
+
+    return paginate_cursor(page)
+
+
+# --------------------------------------------------------
+# FETCH ALL ISSUES ACROSS AN ORG (PARALLEL)
+# --------------------------------------------------------
+
+def fetch_org_issues_graphql(
+    client: GitHubClient,
+    org: str,
+    max_workers: int = 5,
+) -> list[IssueRecord]:
+    """
+    Fetch all issues across all repositories in an organization.
+
+    Args:
+        client: Authenticated GitHub client.
+        org: GitHub organization login.
+        max_workers: Number of worker threads for parallel repository fetches.
+
+    Returns:
+        A combined list of issue records across the organization.
+    """
+
+    repos = fetch_org_repos_graphql(client, org)
+
+    all_issues: list[IssueRecord] = []
+
+    def fetch(repo: RepositoryRecord) -> list[IssueRecord]:
+        logger.info("Scanning repository %s", repo.full_name)
+
+        return fetch_repo_issues_graphql(
+            client,
+            owner=repo.owner,
+            repo=repo.name,
+        )
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+
+        futures = {
+            executor.submit(fetch, repo): repo
+            for repo in repos
+        }
+
+        for future in as_completed(futures):
+
+            repo = futures[future]
+
+            try:
+                repo_issues = future.result()
+                all_issues.extend(repo_issues)
+
+            except Exception as e:
+                logger.exception(
+                    "Failed fetching issues for %s: %s",
+                    repo.full_name,
+                    e,
+                )
+
+    return all_issues
+
+
+# --------------------------------------------------------
+# FETCH MERGED PR DIFFICULTY FOR ONE REPOSITORY
+# --------------------------------------------------------
+
+def fetch_repo_merged_pr_difficulty_graphql(
+    client: GitHubClient,
+    owner: str,
+    repo: str,
+) -> list[PullRequestDifficultyRecord]:
+    """
+    Fetch merged pull requests and their linked closing issues for a repository.
+
+    Args:
+        client: Authenticated GitHub client.
+        owner: Repository owner or organization name.
+        repo: Repository name only, not full_name.
+
+    Returns:
+        A list of normalized records linking merged PRs to issues they close.
+    """
+    def page(cursor: str | None) -> tuple[list[PullRequestDifficultyRecord], str | None, bool]:
+
+        data = client.graphql(
+            MERGED_PR_QUERY,
+            {
+                "owner": owner,
+                "repo": repo,
+                "cursor": cursor,
+            },
+        )
+
+        pr_data = data["data"]["repository"]["pullRequests"]
+
+        items: list[PullRequestDifficultyRecord] = []
+
+        for pr in pr_data["nodes"]:
+
+            issues = pr["closingIssuesReferences"]["nodes"]
+
+            for issue in issues:
+
+                labels = [
+                    label["name"]
+                    for label in issue["labels"]["nodes"]
+                ]
+
+                items.append(
+                    PullRequestDifficultyRecord(
+                        repo=f"{owner}/{repo}",
+                        pr_number=pr["number"],
+                        pr_created_at=_parse_dt(pr["createdAt"]), #type: ignore
+                        pr_merged_at=_parse_dt(pr["mergedAt"]), #type: ignore
+                        pr_additions=pr["additions"],
+                        pr_deletions=pr["deletions"],
+                        pr_changed_files=pr["changedFiles"],
+                        issue_number=issue["number"],
+                        issue_labels=labels,
+                    )
+                )
+
+        next_cursor = pr_data["pageInfo"]["endCursor"]
+        has_next = pr_data["pageInfo"]["hasNextPage"]
+
+        return items, next_cursor, has_next
+
+    return paginate_cursor(page)
+
+# --------------------------------------------------------
+# FETCH MERGED PR DIFFICULTY ACROSS AN ORG (PARALLEL)
+# --------------------------------------------------------
+
+def fetch_org_merged_pr_difficulty_graphql(
+    client: GitHubClient,
+    org: str,
+    max_workers: int = 5,
+) -> list[PullRequestDifficultyRecord]:
+    """
+    Fetch merged pull request difficulty records across all repositories in an organization.
+
+    Args:
+        client: Authenticated GitHub client.
+        org: GitHub organization login.
+        max_workers: Number of worker threads for parallel repository fetches.
+
+    Returns:
+        A combined list of merged PR difficulty records.
+    """
+    repos = fetch_org_repos_graphql(client, org)
+    all_records: list[PullRequestDifficultyRecord] = []
+
+    def fetch(repo: RepositoryRecord) -> list[PullRequestDifficultyRecord]:
+        logger.info("Scanning merged PRs for repository %s", repo.full_name)
+        return fetch_repo_merged_pr_difficulty_graphql(client, owner=repo.owner, repo=repo.name)
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(fetch, repo): repo for repo in repos}
+
+        for future in as_completed(futures):
+
+            repo = futures[future]
+
+            try:
+                all_records.extend(future.result())
+
+            except Exception as exc:
+                logger.exception(
+                    "Failed fetching merged PRs for %s: %s",
+                    repo.full_name,
+                    exc,
+                )
+    
+    return all_records
+
+

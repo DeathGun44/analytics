@@ -11,8 +11,9 @@ from __future__ import annotations
 import pandas as pd
 
 from hiero_analytics.data_sources.github_client import GitHubClient
-from hiero_analytics.data_sources.github_graphql import fetch_repo_issues_graphql
+from hiero_analytics.data_sources.github_ingest import fetch_repo_issues_graphql
 
+from hiero_analytics.data_sources.models import IssueRecord
 from hiero_analytics.metrics.plotting.pie import plot_pie
 from hiero_analytics.config.paths import ensure_output_dirs, DATA_DIR, CHARTS_DIR
 from hiero_analytics.transform.save import save_dataframe
@@ -39,7 +40,7 @@ DIFFICULTY_LABELS = {
 }
 
 
-def compute_difficulty_counts(issues):
+def compute_difficulty_counts(issues: list[IssueRecord]):
 
     results = {
         difficulty: {"total": 0, "closed": 0}
@@ -48,8 +49,8 @@ def compute_difficulty_counts(issues):
 
     for issue in issues:
 
-        labels = {l.lower() for l in issue.get("labels", [])}
-        state = issue.get("state", "").lower()
+        labels = {l.lower() for l in issue.labels}
+        state = issue.state.lower()
 
         for difficulty, difficulty_labels in DIFFICULTY_LABELS.items():
 

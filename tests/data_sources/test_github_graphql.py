@@ -1,6 +1,6 @@
 from unittest.mock import Mock
 
-import hiero_analytics.data_sources.github_graphql as graphql
+import hiero_analytics.data_sources.github_queries as graphql
 
 
 def test_fetch_org_repos_graphql(monkeypatch):

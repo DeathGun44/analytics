@@ -15,12 +15,10 @@ def paginate_page_number(
     page_size: int = DEFAULT_PAGE_SIZE,
 ) -> List[Any]:
     """
-    Generic paginator for REST APIs that use page numbers.
+    Collect items from a page-number-based API.
 
-    Example APIs:
-    - GitHub REST issues
-    - GitHub REST repos
-    - GitHub search API
+    The callback should return a list of items for the requested page.
+    Pagination stops when an empty page is returned.
     """
 
     results: List[Any] = []

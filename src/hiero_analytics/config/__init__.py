@@ -1,41 +1,33 @@
-from .paths import (
-    PROJECT_ROOT,
-    OUTPUTS_DIR,
-    LABEL_ANALYTICS_DIR,
-    ensure_output_dirs,
+from .chart_titles import (
+    label_yearly,
+    label_total_by_repo,
+    pipeline,
 )
-from .analytics import (
-    DEFAULT_MODE,
-    DEFAULT_ORG,
-    DEFAULT_REPO,
-    DEFAULT_LABELS,
-    DEFAULT_TIMEFRAME,
-    DEFAULT_INCLUDE_PULL_REQUESTS,
-)
+
 from .charts import (
     DEFAULT_DPI,
     DEFAULT_FIGSIZE,
-    LABEL_COLORS,
 )
 from .github import (
     HTTP_TIMEOUT_SECONDS,
     REQUEST_DELAY_SECONDS,
+    github_headers
+)
+
+from .paths import (
+    ensure_output_dirs,
+    CACHE_DIR
 )
 
 __all__ = [
-    "PROJECT_ROOT",
-    "OUTPUTS_DIR",
-    "LABEL_ANALYTICS_DIR",
     "ensure_output_dirs",
-    "DEFAULT_MODE",
-    "DEFAULT_ORG",
-    "DEFAULT_REPO",
-    "DEFAULT_LABELS",
-    "DEFAULT_TIMEFRAME",
-    "DEFAULT_INCLUDE_PULL_REQUESTS",
     "DEFAULT_DPI",
     "DEFAULT_FIGSIZE",
-    "LABEL_COLORS",
     "HTTP_TIMEOUT_SECONDS",
     "REQUEST_DELAY_SECONDS",
+    "label_yearly",
+    "label_total_by_repo",
+    "pipeline",
+    "CACHE_DIR",
+    "github_headers",
 ]

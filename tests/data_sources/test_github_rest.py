@@ -1,6 +1,6 @@
 from unittest.mock import Mock
 
-import hiero_analytics.data_sources.github_rest as github_rest
+import hiero_analytics.data_sources.archived.github_rest as github_rest
 
 
 def test_fetch_org_repos(monkeypatch):

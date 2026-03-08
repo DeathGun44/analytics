@@ -17,9 +17,8 @@ from hiero_analytics.config.paths import (
 )
 
 from hiero_analytics.data_sources.github_client import GitHubClient
-from hiero_analytics.data_sources.github_graphql import fetch_org_issues_graphql
+from hiero_analytics.data_sources.github_ingest import fetch_org_issues_graphql
 
-from hiero_analytics.identity.issue_normalizer import normalize_issues
 from hiero_analytics.transform.dataframe import issues_to_dataframe
 from hiero_analytics.transform.save import save_dataframe
 
@@ -53,22 +52,15 @@ def main() -> None:
     # Fetch issues
     # --------------------------------------------------
 
+
     client = GitHubClient()
 
-    raw = fetch_org_issues_graphql(
+    issues = fetch_org_issues_graphql(
         client,
         org=ORG,
     )
 
-    print(f"Fetched {len(raw)} raw issues")
-
-    # --------------------------------------------------
-    # Normalize issues
-    # --------------------------------------------------
-
-    issues = normalize_issues(raw)
-
-    print(f"Normalized {len(issues)} issues")
+    print(f"Fetched {len(issues)} issues")
 
     # --------------------------------------------------
     # Transform → DataFrame
