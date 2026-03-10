@@ -11,7 +11,26 @@ def label_metrics(
     label_spec: LabelSpec,
 ) -> Dict[str, pd.DataFrame]:
     """
-    Compute metrics for a given label group.
+    Compute analytics metrics for a given label group.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Issue dataframe. Must contain:
+        - repo
+        - year
+        - labels
+
+    label_spec : LabelSpec
+        Domain label specification describing the label group.
+
+    Returns
+    -------
+    Dict[str, pd.DataFrame]
+        Dictionary containing:
+        - yearly
+        - yearly_by_repo
+        - total_by_repo
     """
 
     if df.empty:
@@ -20,11 +39,7 @@ def label_metrics(
     if "labels" not in df.columns:
         raise ValueError("DataFrame must contain a 'labels' column")
 
-    labels = label_spec.labels
-
-    mask = df["labels"].map(
-        lambda issue_labels: bool(labels.intersection(issue_labels or []))
-    )
+    mask = df["labels"].map(label_spec.matches)
 
     filtered = df[mask]
 
@@ -60,6 +75,9 @@ def label_metrics(
 
 
 def _empty_metrics() -> Dict[str, pd.DataFrame]:
+    """
+    Return empty metric tables with consistent schemas.
+    """
 
     return {
         "yearly": pd.DataFrame(columns=["year", "count"]),

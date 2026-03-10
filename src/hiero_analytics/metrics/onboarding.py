@@ -8,7 +8,18 @@ def build_gfi_pipeline(
     gfic_yearly: pd.DataFrame,
 ) -> pd.DataFrame:
     """
-    Build GFIC → GFI pipeline dataset.
+    Build a yearly onboarding pipeline dataset.
+
+    Combines Good First Issue (GFI) and Good First Issue Candidate (GFIC)
+    counts into a single dataframe suitable for stacked charts.
+
+    Returns
+    -------
+    pd.DataFrame
+        Columns:
+        - year
+        - gfi
+        - gfic
     """
 
     pipeline = (
@@ -19,11 +30,11 @@ def build_gfi_pipeline(
             how="outer",
         )
         .fillna(0)
-        .astype({"gfi": int, "gfic": int})
-        .sort_values("year")
     )
 
-    return pipeline
+    pipeline[["gfi", "gfic"]] = pipeline[["gfi", "gfic"]].astype(int)
+
+    return pipeline.sort_values("year")
 
 
 def build_onboarding_repo_pipeline(
@@ -31,16 +42,27 @@ def build_onboarding_repo_pipeline(
     gfic_total_by_repo: pd.DataFrame,
 ) -> pd.DataFrame:
     """
-    Build stacked dataset showing onboarding pipeline per repository.
+    Build onboarding pipeline dataset grouped by repository.
+
+    Returns
+    -------
+    pd.DataFrame
+        Columns:
+        - repo
+        - gfi
+        - gfic
     """
 
-    gfi = gfi_total_by_repo.rename(columns={"count": "gfi"})
-    gfic = gfic_total_by_repo.rename(columns={"count": "gfic"})
-
     pipeline = (
-        gfi.merge(gfic, on="repo", how="outer")
+        gfi_total_by_repo.rename(columns={"count": "gfi"})
+        .merge(
+            gfic_total_by_repo.rename(columns={"count": "gfic"}),
+            on="repo",
+            how="outer",
+        )
         .fillna(0)
-        .sort_values("gfi", ascending=False)
     )
 
-    return pipeline
+    pipeline[["gfi", "gfic"]] = pipeline[["gfi", "gfic"]].astype(int)
+
+    return pipeline.sort_values("gfi", ascending=False)

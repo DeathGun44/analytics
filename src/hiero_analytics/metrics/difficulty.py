@@ -2,70 +2,62 @@ from __future__ import annotations
 
 import pandas as pd
 
-from hiero_analytics.domain.labels import (
-    DIFFICULTY_BEGINNER,
-    DIFFICULTY_GOOD_FIRST_ISSUE,
-    DIFFICULTY_INTERMEDIATE,
-    DIFFICULTY_ADVANCED,
-)
+from hiero_analytics.domain.difficulty import DIFFICULTY_LEVELS
 
 
 def difficulty_distribution(df: pd.DataFrame) -> pd.DataFrame:
     """
     Compute difficulty distribution for issues.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Issue dataframe containing a "labels" column.
+
+    Returns
+    -------
+    pd.DataFrame
+        Columns:
+            difficulty
+            count
     """
 
     if df.empty:
         return pd.DataFrame(columns=["difficulty", "count"])
 
-    groups = {
-        DIFFICULTY_GOOD_FIRST_ISSUE.name: DIFFICULTY_GOOD_FIRST_ISSUE.labels,
-        DIFFICULTY_BEGINNER.name: DIFFICULTY_BEGINNER.labels,
-        DIFFICULTY_INTERMEDIATE.name: DIFFICULTY_INTERMEDIATE.labels,
-        DIFFICULTY_ADVANCED.name: DIFFICULTY_ADVANCED.labels,
-    }
-
     rows = []
 
-    for name, labels in groups.items():
+    for level in DIFFICULTY_LEVELS:
 
-        mask = df["labels"].map(
-            lambda issue_labels: bool(labels.intersection(issue_labels or []))
-        )
+        mask = df["labels"].map(level.label_spec.matches)
 
         rows.append(
             {
-                "difficulty": name,
-                "count": mask.sum(),
+                "difficulty": level.name,
+                "count": int(mask.sum()),
             }
         )
 
     return pd.DataFrame(rows)
+
 
 def merged_pr_difficulty_distribution(
     df: pd.DataFrame,
 ) -> pd.DataFrame:
+    """
+    Compute difficulty distribution for merged pull requests.
 
-    groups = {
-        DIFFICULTY_GOOD_FIRST_ISSUE.name: DIFFICULTY_GOOD_FIRST_ISSUE.labels,
-        DIFFICULTY_BEGINNER.name: DIFFICULTY_BEGINNER.labels,
-        DIFFICULTY_INTERMEDIATE.name: DIFFICULTY_INTERMEDIATE.labels,
-        DIFFICULTY_ADVANCED.name: DIFFICULTY_ADVANCED.labels,
-    }
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame containing PR-linked issue labels.
 
-    rows = []
+    Returns
+    -------
+    pd.DataFrame
+        Columns:
+            difficulty
+            count
+    """
 
-    for name, labels in groups.items():
-
-        mask = df["labels"].map(
-            lambda l: bool(set(l) & labels)
-        )
-
-        rows.append(
-            {
-                "difficulty": name,
-                "count": mask.sum(),
-            }
-        )
-
-    return pd.DataFrame(rows)
+    return difficulty_distribution(df)

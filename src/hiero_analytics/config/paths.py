@@ -7,6 +7,7 @@ from pathlib import Path
 
 # Analytics will default to hiero-ledger org
 ORG = "hiero-ledger"
+REPO = "hiero-sdk-python"
 
 """
 PROJECT_ROOT is the root directory of the project, calculated as three levels up from this file's location.
