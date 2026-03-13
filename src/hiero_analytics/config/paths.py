@@ -5,8 +5,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-# Analytics will default to hiero-ledger org
-ORG = "hiero-ledger"
+import os
+
+ORG = os.getenv("GITHUB_ORG", "hiero-ledger")
+REPO = os.getenv("GITHUB_REPO", "hiero-sdk-python")
 
 """
 PROJECT_ROOT is the root directory of the project, calculated as three levels up from this file's location.
@@ -16,10 +18,18 @@ CHARTS_DIR is the subdirectory within OUTPUTS_DIR where all generated charts (e.
 CACHE_DIR is the directory where cached data from GitHub API requests will be stored to avoid redundant requests.
 """
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
+
 OUTPUTS_DIR = PROJECT_ROOT / "outputs"
+
 DATA_DIR = OUTPUTS_DIR / "data"
 CHARTS_DIR = OUTPUTS_DIR / "charts"
-CACHE_DIR = Path(".cache/github")
+
+REPO_DATA_DIR = DATA_DIR / "repo"
+ORG_DATA_DIR = DATA_DIR / "org"
+
+REPO_CHARTS_DIR = CHARTS_DIR / "repo"
+ORG_CHARTS_DIR = CHARTS_DIR / "org"
 
 def ensure_output_dirs() -> None:
     """
@@ -31,7 +41,31 @@ def ensure_output_dirs() -> None:
     Returns:
         None
     """
-    OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    CHARTS_DIR.mkdir(parents=True, exist_ok=True)
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    for path in [
+        OUTPUTS_DIR,
+        DATA_DIR,
+        CHARTS_DIR,
+        REPO_DATA_DIR,
+        ORG_DATA_DIR,
+        REPO_CHARTS_DIR,
+        ORG_CHARTS_DIR,
+    ]:
+        path.mkdir(parents=True, exist_ok=True)
+
+def ensure_repo_dirs(repo: str) -> tuple[Path, Path]:
+    """
+    Create repo-specific output directories.
+
+    Returns:
+        repo_data_dir, repo_charts_dir
+    """
+
+    repo_name = repo.replace("/", "_")
+
+    repo_data_dir = REPO_DATA_DIR / repo_name
+    repo_charts_dir = REPO_CHARTS_DIR / repo_name
+
+    repo_data_dir.mkdir(parents=True, exist_ok=True)
+    repo_charts_dir.mkdir(parents=True, exist_ok=True)
+
+    return repo_data_dir, repo_charts_dir
