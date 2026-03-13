@@ -1,100 +1,123 @@
 from unittest.mock import Mock
 
-import hiero_analytics.data_sources.archived.github_rest as github_rest
+import pytest
+
+import hiero_analytics.data_sources.github_search as search
 
 
-def test_fetch_org_repos(monkeypatch):
+# --------------------------------------------------------
+# fixtures
+# --------------------------------------------------------
 
-    client = Mock()
+@pytest.fixture
+def mock_client():
+    return Mock()
 
-    fake_data = [
-        {"full_name": "org/repo1"},
-        {"full_name": "org/repo2"},
-        {"name": "ignored"},
-    ]
 
-    client.get.return_value = fake_data
-
+@pytest.fixture
+def bypass_pagination(monkeypatch):
+    """
+    Replace paginate_page_number so only one page runs.
+    """
     monkeypatch.setattr(
-        github_rest,
+        search,
         "paginate_page_number",
         lambda f: f(1),
     )
 
-    repos = github_rest.fetch_org_repos(client, "org")
 
-    assert repos == ["org/repo1", "org/repo2"]
+# --------------------------------------------------------
+# basic success case
+# --------------------------------------------------------
 
+def test_search_issues_returns_items(mock_client, bypass_pagination):
 
-def test_fetch_repo_issues_without_label(monkeypatch):
+    mock_client.get.return_value = {
+        "items": [
+            {"id": 1, "title": "Issue A"},
+            {"id": 2, "title": "Issue B"},
+        ]
+    }
 
-    client = Mock()
+    results = search.search_issues(mock_client, "label:bug")
 
-    fake_data = [
-        {"id": 1},
-        {"id": 2},
-        "invalid",
-    ]
-
-    client.get.return_value = fake_data
-
-    monkeypatch.setattr(
-        github_rest,
-        "paginate_page_number",
-        lambda f: f(1),
-    )
-
-    issues = github_rest.fetch_repo_issues(
-        client,
-        "org/repo",
-    )
-
-    assert issues == [{"id": 1}, {"id": 2}]
+    assert len(results) == 2
+    assert results[0]["id"] == 1
 
 
-def test_fetch_repo_issues_with_label(monkeypatch):
+# --------------------------------------------------------
+# request parameters
+# --------------------------------------------------------
 
-    client = Mock()
+def test_search_issues_calls_client_with_correct_params(mock_client, bypass_pagination):
 
-    fake_data = [{"id": 10}]
-    client.get.return_value = fake_data
+    mock_client.get.return_value = {"items": []}
 
-    monkeypatch.setattr(
-        github_rest,
-        "paginate_page_number",
-        lambda f: f(1),
-    )
+    search.search_issues(mock_client, "repo:org/repo is:issue")
 
-    github_rest.fetch_repo_issues(
-        client,
-        "org/repo",
-        label="bug",
-    )
+    mock_client.get.assert_called_once()
 
-    called_url = client.get.call_args[0][0]
+    args, kwargs = mock_client.get.call_args
 
-    assert "labels=bug" in called_url
+    assert args[0] == "https://api.github.com/search/issues"
+
+    params = kwargs["params"]
+
+    assert params["q"] == "repo:org/repo is:issue"
+    assert params["per_page"] == 100
+    assert params["page"] == 1
 
 
-def test_fetch_repo_issues_filters_invalid(monkeypatch):
+# --------------------------------------------------------
+# filtering invalid items
+# --------------------------------------------------------
 
-    client = Mock()
+def test_search_issues_filters_non_dict_items(mock_client, bypass_pagination):
 
-    fake_data = [
-        {"id": 1},
-        {"id": 2},
-        None,
-        "bad",
-    ]
+    mock_client.get.return_value = {
+        "items": [
+            {"id": 1},
+            None,
+            "bad",
+            {"id": 2},
+        ]
+    }
 
-    client.get.return_value = fake_data
+    results = search.search_issues(mock_client, "test")
 
-    monkeypatch.setattr(
-        github_rest,
-        "paginate_page_number",
-        lambda f: f(1),
-    )
+    assert len(results) == 2
+    assert all(isinstance(i, dict) for i in results)
 
-    issues = github_rest.fetch_repo_issues(client, "org/repo")
 
-    assert issues == [{"id": 1}, {"id": 2}]
+# --------------------------------------------------------
+# missing items key
+# --------------------------------------------------------
+
+def test_search_issues_handles_missing_items(mock_client, bypass_pagination):
+
+    mock_client.get.return_value = {}
+
+    results = search.search_issues(mock_client, "test")
+
+    assert results == []
+
+
+# --------------------------------------------------------
+# paginator integration
+# --------------------------------------------------------
+
+def test_search_issues_uses_paginator(monkeypatch, mock_client):
+
+    called = {"value": False}
+
+    def fake_paginator(page_fn):
+        called["value"] = True
+        return page_fn(1)
+
+    monkeypatch.setattr(search, "paginate_page_number", fake_paginator)
+
+    mock_client.get.return_value = {"items": []}
+
+    search.search_issues(mock_client, "test")
+
+    assert called["value"] is True
