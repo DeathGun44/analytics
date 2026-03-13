@@ -1,78 +1,119 @@
-from hiero_analytics.data_sources.pagination import (
-    paginate_page_number,
-    paginate_cursor,
-)
+import pytest
 
+import hiero_analytics.data_sources.pagination as pagination
+
+
+# ---------------------------------------------------------
+# page-number pagination
+# ---------------------------------------------------------
 
 def test_paginate_page_number_multiple_pages():
 
     pages = {
         1: [1, 2, 3],
-        2: [4, 5],
+        2: [4, 5, 6],
         3: [],
     }
 
-    def fetch_page(page):
+    def fetch(page):
         return pages[page]
 
-    results = paginate_page_number(fetch_page, page_size=3)
+    results = pagination.paginate_page_number(fetch, page_size=3)
 
-    assert results == [1, 2, 3, 4, 5]
+    assert results == [1, 2, 3, 4, 5, 6]
 
 
-def test_paginate_page_number_empty():
+def test_paginate_page_number_partial_page_stops():
 
-    def fetch_page(page):
+    pages = {
+        1: [1, 2, 3],
+        2: [4],  # partial page
+    }
+
+    def fetch(page):
+        return pages.get(page, [])
+
+    results = pagination.paginate_page_number(fetch, page_size=3)
+
+    assert results == [1, 2, 3, 4]
+
+
+def test_paginate_page_number_empty_first_page():
+
+    def fetch(page):
         return []
 
-    results = paginate_page_number(fetch_page)
+    results = pagination.paginate_page_number(fetch)
 
     assert results == []
 
 
-def test_paginate_page_number_single_page():
+def test_paginate_page_number_max_pages_guard():
 
-    def fetch_page(page):
-        if page == 1:
-            return [1, 2]
-        return []
+    def fetch(page):
+        return [page] * 100
 
-    results = paginate_page_number(fetch_page, page_size=100)
+    results = pagination.paginate_page_number(
+        fetch,
+        page_size=100,
+        max_pages=2,
+    )
 
-    assert results == [1, 2]
+    assert len(results) == 200
 
+
+# ---------------------------------------------------------
+# cursor pagination
+# ---------------------------------------------------------
 
 def test_paginate_cursor_multiple_pages():
 
-    pages = {
-        None: ([1, 2], "cursor1", True),
-        "cursor1": ([3, 4], "cursor2", True),
-        "cursor2": ([5], None, False),
+    data = {
+        None: ([1, 2], "A", True),
+        "A": ([3, 4], "B", True),
+        "B": ([5], None, False),
     }
 
-    def fetch_page(cursor):
-        return pages[cursor]
+    def fetch(cursor):
+        return data[cursor]
 
-    results = paginate_cursor(fetch_page)
+    results = pagination.paginate_cursor(fetch)
 
     assert results == [1, 2, 3, 4, 5]
 
 
 def test_paginate_cursor_single_page():
 
-    def fetch_page(cursor):
-        return ([1, 2, 3], None, False)
+    def fetch(cursor):
+        return ([1, 2], None, False)
 
-    results = paginate_cursor(fetch_page)
+    results = pagination.paginate_cursor(fetch)
 
-    assert results == [1, 2, 3]
+    assert results == [1, 2]
 
 
-def test_paginate_cursor_empty():
+def test_paginate_cursor_max_pages_guard():
 
-    def fetch_page(cursor):
-        return ([], None, False)
+    def fetch(cursor):
+        return ([1], "next", True)
 
-    results = paginate_cursor(fetch_page)
+    results = pagination.paginate_cursor(
+        fetch,
+        max_pages=2,
+    )
+
+    assert len(results) == 2
+
+
+def test_paginate_cursor_handles_empty_items():
+
+    calls = {
+        None: ([], None, False)
+    }
+
+    def fetch(cursor):
+        return calls[cursor]
+
+    results = pagination.paginate_cursor(fetch)
 
     assert results == []
