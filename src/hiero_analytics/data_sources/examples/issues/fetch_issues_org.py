@@ -18,6 +18,7 @@ def main() -> None:
     issues = fetch_org_issues_graphql(
         client,
         org=ORGANIZATION,
+        states=["OPEN", "CLOSED"],
         max_workers=5,
     )
 

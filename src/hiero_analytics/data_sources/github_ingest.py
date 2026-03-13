@@ -87,6 +87,7 @@ def fetch_repo_issues_graphql(
     client: GitHubClient,
     owner: str,
     repo: str,
+    states: list[str] | None = None,
 ) -> List[IssueRecord]:
     """
     Fetch all issues for a repository using GraphQL.
@@ -95,10 +96,16 @@ def fetch_repo_issues_graphql(
         client: Authenticated GitHub client.
         owner: Repository owner or organization name.
         repo: Repository name only, not full_name.
+        states: Optional list of states (e.g. ["OPEN","CLOSED"])
 
     Returns:
         A list of normalized issue records.
     """
+
+    normalized_states = None
+    if states:
+        normalized_states = [s.upper() for s in states]
+
     def page(cursor: str | None) -> tuple[list[IssueRecord], str | None, bool]:
 
         data = client.graphql(
@@ -107,6 +114,7 @@ def fetch_repo_issues_graphql(
                 "owner": owner,
                 "repo": repo,
                 "cursor": cursor,
+                "states": normalized_states,
             },
         )
 
@@ -140,6 +148,7 @@ def fetch_repo_issues_graphql(
 def fetch_org_issues_graphql(
     client: GitHubClient,
     org: str,
+    states: list[str] | None = None,
     max_workers: int = 5,
 ) -> list[IssueRecord]:
     """
@@ -148,6 +157,7 @@ def fetch_org_issues_graphql(
     Args:
         client: Authenticated GitHub client.
         org: GitHub organization login.
+        states: Optional issue states filter.
         max_workers: Number of worker threads for parallel repository fetches.
 
     Returns:
@@ -165,6 +175,7 @@ def fetch_org_issues_graphql(
             client,
             owner=repo.owner,
             repo=repo.name,
+            states=states,
         )
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
