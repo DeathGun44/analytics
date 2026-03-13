@@ -46,7 +46,7 @@ def paginate_page_number(
     results: List[Any] = []
     page = 1
 
-    logger.debug("Requesting pages")
+    logger.debug("Requesting cursor pages (start_page=%d, start_cursor=%s)")
 
     while True:
 
@@ -68,7 +68,7 @@ def paginate_page_number(
 
         page += 1
 
-        if max_pages and page > max_pages:
+        if max_pages is not None and page > max_pages:
             logger.warning("Pagination stopped after max_pages=%d", max_pages)
             break
 
@@ -136,7 +136,7 @@ def paginate_cursor(
         cursor = next_cursor
         page += 1
 
-        if max_pages and page > max_pages:
+        if max_pages is not None and page > max_pages:
             logger.warning(
                 "Cursor pagination stopped after max_pages=%d",
                 max_pages,

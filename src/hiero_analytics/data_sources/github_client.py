@@ -122,7 +122,7 @@ class GitHubClient:
     def _handle_graphql_rate(self, data: JSON) -> None:
         """Handle GraphQL rate-limit reporting and throttling."""
 
-        rate: GraphQLRateLimit | None = data.get("data", {}).get("rateLimit")
+        rate: GraphQLRateLimit | None = (data.get("data") or {}).get("rateLimit")
 
         if not rate:
             return
@@ -185,7 +185,7 @@ class GitHubClient:
 
                 logger.warning("GraphQL rate limit exceeded.")
 
-                rate: GraphQLRateLimit | None = data.get("data", {}).get("rateLimit")
+                rate: GraphQLRateLimit | None = (data.get("data") or {}).get("rateLimit")
 
                 if rate and rate.get("resetAt"):
 
@@ -226,8 +226,10 @@ class GitHubClient:
         url: str,
         **kwargs: Any,
     ) -> JSON:
-        """Execute HTTP request with retries and GraphQL rate awareness."""
-
+        """
+        Execute HTTP request with retries and rate-limit awareness for both
+        REST (via HTTP headers) and GraphQL (via response payload).
+        """
         for attempt in range(1, MAX_RETRIES + 1):
 
             logger.debug(
@@ -270,6 +272,44 @@ class GitHubClient:
 
             logger.debug("GitHub response ← %.2fs", elapsed)
 
+            # --------------------------------------------------------
+            # REST rate-limit handling (non-GraphQL responses)
+            # --------------------------------------------------------
+            is_graphql = url.endswith("/graphql")
+            if not is_graphql:
+                remaining_header = response.headers.get("X-RateLimit-Remaining")
+                reset_header = response.headers.get("X-RateLimit-Reset")
+                if remaining_header is not None and reset_header is not None:
+                    try:
+                        remaining = int(remaining_header)
+                        reset_epoch = int(reset_header)
+                    except (TypeError, ValueError):
+                        remaining = None
+                        reset_epoch = None
+                    if remaining == 0 and reset_epoch is not None:
+                        # Compute how long to wait until the rate limit resets.
+                        sleep_seconds = max(0, reset_epoch - int(time.time()))
+                        if response.status_code == 403 and attempt < MAX_RETRIES:
+                            logger.warning(
+                                "GitHub REST rate limit reached (403). "
+                                "Sleeping for %ds before retrying attempt %d...",
+                                sleep_seconds,
+                                attempt + 1,
+                            )
+                            if sleep_seconds > 0:
+                                time.sleep(sleep_seconds)
+                            continue
+                        if response.ok and sleep_seconds > 0:
+                            # Successful response but no remaining budget; delay
+                            # to avoid immediate rate-limit errors on subsequent calls.
+                            logger.warning(
+                                "GitHub REST rate limit exhausted. "
+                                "Sleeping for %ds before returning response...",
+                                sleep_seconds,
+                            )
+                            time.sleep(sleep_seconds)
+            # For GraphQL and non-rate-limited REST responses, propagate HTTP errors.
+            
             response.raise_for_status()
 
             data: JSON = response.json()
@@ -277,8 +317,10 @@ class GitHubClient:
             # update counters
             self.requests_made += 1
 
-            rate: GraphQLRateLimit | None = data.get("data", {}).get("rateLimit")
-
+            # --------------------------------------------------------
+            # GraphQL-specific rate-limit accounting
+            # --------------------------------------------------------
+            rate: GraphQLRateLimit | None = (data.get("data") or {}).get("rateLimit")
             if rate:
                 self.cost_used += rate.get("cost", 0)
 

@@ -3,13 +3,12 @@ Example script: collect merged pull request difficulty metrics
 """
 
 from hiero_analytics.config.logging import setup_logging
-from hiero_analytics.config.paths import ORG, REPO
+from hiero_analytics.config.paths import ORG
 from hiero_analytics.data_sources.github_client import GitHubClient
 from hiero_analytics.data_sources.github_ingest import fetch_org_merged_pr_difficulty_graphql
 
 setup_logging()
 
-REPOSITORY = REPO
 ORGANIZATION = ORG
 
 def main() -> None:

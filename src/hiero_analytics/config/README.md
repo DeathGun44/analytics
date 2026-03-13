@@ -83,12 +83,11 @@ Important paths:
 * `OUTPUTS_DIR`
 * `DATA_DIR`
 * `CHARTS_DIR`
-* `CACHE_DIR`
 
 Utility function:
 
 * `ensure_output_dirs()`
-  Creates the required output and cache directories if they do not already exist.
+  Creates the required output and directories if they do not already exist.
 
 ---
 

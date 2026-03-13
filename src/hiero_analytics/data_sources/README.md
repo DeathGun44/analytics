@@ -26,7 +26,6 @@ The module exports a small public API for fetching repository, issue, and pull r
 ```
 data_sources/
 │
-├── cache.py
 ├── github_client.py
 ├── github_ingest.py
 ├── github_queries.py
@@ -110,21 +109,6 @@ paginate_page_number()
 Used by GraphQL endpoints:
 ```
 paginate_cursor()
-```
-
-### Caching
-
-Location: `cache.py`
-
-Provides simple file-based caching of API responses:
-```
-load_cache(key)
-save_cache(key, data)
-```
-
-Cached responses are stored at:
-```
-.cache/github/
 ```
 
 ## Typical Workflow
