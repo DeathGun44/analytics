@@ -2,6 +2,7 @@
 This module provides functions to search for issues on GitHub using the REST API. 
 It supports pagination to handle large result sets and allows for complex search queries using GitHub's search syntax.
 """
+
 from __future__ import annotations
 
 from typing import List, Dict, Any
@@ -16,23 +17,28 @@ def search_issues(
 ) -> List[Dict[str, Any]]:
     """
     Search GitHub issues and pull requests using the REST search API.
-    
     Args:
         client: Authenticated GitHub client.
         query: GitHub search query string.
 
     Returns:
-        A list of search result objects from the GitHub API.
+        A list of issue objects returned by the GitHub API.
     """
 
     def page(page_number: int) -> list[dict[str, Any]]:
 
-        url = (
-            f"https://api.github.com/search/issues"
-            f"?q={query}&per_page=100&page={page_number}"
+        params = {
+            "q": query,
+            "per_page": 100,
+            "page": page_number,
+        }
+
+        data = client._request(
+            "GET",
+            "https://api.github.com/search/issues",
+            params=params,
         )
 
-        data = client.get(url)
         items = data.get("items", [])
 
         return [item for item in items if isinstance(item, dict)]
