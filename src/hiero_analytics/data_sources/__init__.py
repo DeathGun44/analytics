@@ -1,5 +1,3 @@
-from .cache import load_cache, save_cache
-
 from .github_client import GitHubClient
 
 from .github_ingest import (
@@ -29,8 +27,6 @@ from .models import (
 from .pagination import paginate_cursor
 
 __all__ = [
-    "load_cache",
-    "save_cache",
     "GitHubClient",
     "search_issues",
     "REPOS_QUERY",
