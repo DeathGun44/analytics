@@ -16,14 +16,19 @@ query($org:String!,$cursor:String){
       }
     }
   }
+  rateLimit{
+    limit
+    remaining
+    cost
+    resetAt
+  }
 }
 """
 
-
 ISSUES_QUERY: str = """
-query($owner:String!,$repo:String!,$cursor:String){
+query($owner:String!,$repo:String!,$cursor:String,$states:[IssueState!]){
   repository(owner:$owner,name:$repo){
-    issues(first:100, after:$cursor){
+    issues(first:100, after:$cursor, states:$states){
       pageInfo{
         hasNextPage
         endCursor
@@ -34,13 +39,19 @@ query($owner:String!,$repo:String!,$cursor:String){
         state
         createdAt
         closedAt
-        labels(first:20){
+        labels(first:10){
           nodes{
             name
           }
         }
       }
     }
+  }
+  rateLimit{
+    limit
+    remaining
+    cost
+    resetAt
   }
 }
 """
@@ -60,11 +71,15 @@ query($owner:String!, $repo:String!, $cursor:String) {
       }
       nodes {
         number
+        createdAt
         mergedAt
+        additions
+        deletions
+        changedFiles
         closingIssuesReferences(first:10) {
           nodes {
             number
-            labels(first:20) {
+            labels(first:10) {
               nodes {
                 name
               }
@@ -73,6 +88,12 @@ query($owner:String!, $repo:String!, $cursor:String) {
         }
       }
     }
+  }
+  rateLimit{
+    limit
+    remaining
+    cost
+    resetAt
   }
 }
 """
