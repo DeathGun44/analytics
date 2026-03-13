@@ -1,33 +1,38 @@
-from .chart_titles import (
-    label_yearly,
-    label_total_by_repo,
-    pipeline,
-)
-
 from .charts import (
     DEFAULT_DPI,
     DEFAULT_FIGSIZE,
+    TITLE_FONT_SIZE,
+    LABEL_FONT_SIZE,
+    TICK_FONT_SIZE,
+    LEGEND_FONT_SIZE,
+    GRID_ENABLED,
+    GRID_ALPHA,
+    GRID_STYLE,
 )
 from .github import (
     HTTP_TIMEOUT_SECONDS,
     REQUEST_DELAY_SECONDS,
-    github_headers
 )
 
 from .paths import (
+    ORG,
+    REPO,
     ensure_output_dirs,
-    CACHE_DIR
 )
 
 __all__ = [
+    "ORG",
+    "REPO",
     "ensure_output_dirs",
     "DEFAULT_DPI",
     "DEFAULT_FIGSIZE",
+    "TITLE_FONT_SIZE",
+    "LABEL_FONT_SIZE",
+    "TICK_FONT_SIZE",
+    "LEGEND_FONT_SIZE",
+    "GRID_ENABLED",
+    "GRID_ALPHA",
+    "GRID_STYLE",    
     "HTTP_TIMEOUT_SECONDS",
-    "REQUEST_DELAY_SECONDS",
-    "label_yearly",
-    "label_total_by_repo",
-    "pipeline",
-    "CACHE_DIR",
-    "github_headers",
+    "REQUEST_DELAY_SECONDS"
 ]
