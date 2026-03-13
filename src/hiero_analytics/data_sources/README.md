@@ -1,45 +1,44 @@
 # GitHub Data Sources
 
 This module provides the **GitHub ingestion layer** for the analytics pipeline.  
-It handles API communication, pagination, normalization of GitHub objects, and optional caching.
+It handles API communication, pagination, normalization of GitHub objects, and parallel ingestion across repositories.
 
-The goal is to provide **clean, typed records** that downstream analytics code can use without worrying about GitHub API details.
+The goal is to expose a **small, stable API that returns typed records**, so downstream analytics code does not need to deal with GitHub API details.
 
 ---
 
-## Overview
+# Overview
 
 The data source layer is responsible for:
 
-- Communicating with the GitHub REST and GraphQL APIs
-- Handling authentication and rate limits
-- Managing pagination
-- Converting API responses into normalized Python models
-- Supporting caching of API responses
+- Communicating with the **GitHub REST and GraphQL APIs**
+- Handling **authentication and rate limits**
+- Managing **cursor and page-based pagination**
+- Converting API responses into **normalized Python dataclasses**
+- Supporting **parallel repository ingestion**
 
-The module exports a small public API for fetching repository, issue, and pull request data.
+The module exposes a **small public interface** for retrieving repositories, issues, and pull request metadata.
 
 ---
 
-## Module Structure
+# Module Structure
 
 ```
 data_sources/
 │
-├── github_client.py
-├── github_ingest.py
-├── github_queries.py
-├── github_search.py
-├── models.py
-└── pagination.py
+├── github_client.py        # HTTP client with retry and rate limit handling
+├── github_ingest.py        # GraphQL ingestion and normalization logic
+├── github_queries.py       # GraphQL query definitions
+├── github_search.py        # REST search API utilities
+├── models.py               # Typed data records
+└── pagination.py           # Generic pagination helpers
 ```
-
 
 ---
 
-## Public API
+# Public API
 
-The following objects are exported through the package:
+The package exposes the following primary interfaces:
 
 ```python
 from hiero_analytics.data_sources import (
@@ -56,63 +55,171 @@ from hiero_analytics.data_sources import (
 )
 ```
 
-## Components
+---
 
-### GitHubClient
+# Components
+
+## GitHubClient
 
 `github_client.py`
 
 A low-level HTTP client for interacting with the GitHub API.
 
 Features:
-- Persistent HTTP connections via requests.Session
-- Automatic authentication headers
-- Rate-limit handling
-- Support for REST and GraphQL requests
 
+- Persistent HTTP connections via `requests.Session`
+- Automatic authentication using `GITHUB_TOKEN`
+- Built-in retry logic
+- REST and GraphQL support
+- Rate limit awareness
+- Usage tracking for monitoring API usage
 
-### GraphQL Ingestion
+Example:
+
+```python
+client = GitHubClient()
+
+data = client.get(
+    "https://api.github.com/repos/owner/repo"
+)
+```
+
+GraphQL example:
+
+```python
+data = client.graphql(query, variables)
+```
+
+---
+
+# GraphQL Ingestion Layer
 
 `github_ingest.py`
 
-Provides higher-level functions that fetch and normalize GitHub data.
+This module contains the higher-level ingestion functions that fetch and normalize GitHub data.
 
-These functions automatically:
-- handle GraphQL pagination
-- convert API responses into typed records
-- optionally fetch data across multiple repositories in parallel
+Responsibilities:
 
-### REST Search API
+- Handle **GraphQL cursor pagination**
+- Convert API responses into **typed records**
+- Support **parallel ingestion across repositories**
+
+Example:
+
+```python
+client = GitHubClient()
+
+issues = fetch_org_issues_graphql(
+    client,
+    org="hiero-ledger",
+)
+```
+
+These functions return **typed dataclasses**, not raw API responses.
+
+---
+
+# REST Search API
 
 `github_search.py`
 
-Supports GitHub's search endpoint.
+Provides utilities for querying GitHub's REST **Search API**, which supports advanced GitHub search syntax.
 
-### Data Models
+Example:
+
+```python
+issues = search_issues(
+    client,
+    query="org:hiero-ledger is:issue label:bug",
+)
+```
+
+Search results are paginated automatically using the generic pagination helpers.
+
+---
+
+# Data Models
+
+`models.py`
 
 GitHub objects are normalized into typed dataclasses.
 
-e.g.
-`RepositoryRecord`
-`IssueRecord`
-`PullRequestDifficultyRecord`
+### RepositoryRecord
 
-### Pagination Utilities
-
-Provides reusable helpers for APIs that use pagination.
-
-Used by REST endpoints:
-```
-paginate_page_number()
+```python
+RepositoryRecord(
+    full_name="org/repo",
+    name="repo",
+    owner="org",
+)
 ```
 
-Used by GraphQL endpoints:
-```
-paginate_cursor()
+### IssueRecord
+
+```python
+IssueRecord(
+    repo="org/repo",
+    number=123,
+    title="Bug report",
+    state="OPEN",
+    created_at=datetime,
+    closed_at=None,
+    labels=["bug", "good-first-issue"],
+)
 ```
 
-## Typical Workflow
-A typical analytics pipeline will look like:
+### PullRequestDifficultyRecord
+
+```python
+PullRequestDifficultyRecord(
+    repo="org/repo",
+    pr_number=12,
+    pr_created_at=datetime,
+    pr_merged_at=datetime,
+    pr_additions=120,
+    pr_deletions=30,
+    pr_changed_files=4,
+    issue_number=88,
+    issue_labels=["good-first-issue"],
+)
+```
+
+---
+
+# Pagination Utilities
+
+`pagination.py`
+
+Reusable helpers for APIs that use pagination.
+
+### Page-number pagination (REST APIs)
+
+```python
+paginate_page_number(fetch_page)
+```
+
+Used by GitHub search endpoints.
+
+### Cursor pagination (GraphQL APIs)
+
+```python
+paginate_cursor(fetch_page)
+```
+
+Used by GraphQL queries for repositories, issues, and pull requests.
+
+Both helpers provide:
+
+- logging for long-running pagination loops
+- safety guards via `max_pages`
+- automatic result aggregation
+
+---
+
+# Typical Workflow
+
+A typical analytics ingestion pipeline looks like:
+
 ```
 GitHub API
     ↓
@@ -120,9 +227,11 @@ GitHubClient
     ↓
 github_ingest
     ↓
-IssueRecord / RepositoryRecord / PullRequestDifficultyRecord
+RepositoryRecord / IssueRecord / PullRequestDifficultyRecord
     ↓
 transform → DataFrame
     ↓
 metrics + charts
 ```
+
+This design keeps **API logic isolated**, allowing analytics code to operate on clean, structured data.
