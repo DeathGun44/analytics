@@ -1,32 +1,43 @@
-import os
-from unittest.mock import Mock
-
 import pytest
+from unittest.mock import Mock
 
 import hiero_analytics.data_sources.github_client as github_client
 
 
+# ---------------------------------------------------------
+# FIXTURE: disable sleeping
+# ---------------------------------------------------------
+
 @pytest.fixture
 def mock_sleep(monkeypatch):
-    """Prevent real sleep during tests."""
     monkeypatch.setattr(github_client.time, "sleep", lambda x: None)
 
 
+# ---------------------------------------------------------
+# HEADER TESTS
+# ---------------------------------------------------------
+
 def test_client_sets_auth_header(monkeypatch):
-    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+
+    monkeypatch.setattr(github_client, "GITHUB_TOKEN", "test-token")
 
     client = github_client.GitHubClient()
 
-    assert client.headers["Authorization"] == "Bearer test-token"
+    assert client.session.headers["Authorization"] == "Bearer test-token"
 
 
 def test_client_without_token(monkeypatch):
-    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+
+    monkeypatch.setattr(github_client, "GITHUB_TOKEN", None)
 
     client = github_client.GitHubClient()
 
-    assert client.headers == {}
+    assert "Authorization" not in client.session.headers
 
+
+# ---------------------------------------------------------
+# BASIC GET
+# ---------------------------------------------------------
 
 def test_get_success(monkeypatch, mock_sleep):
 
@@ -37,17 +48,26 @@ def test_get_success(monkeypatch, mock_sleep):
     }
     mock_response.json.return_value = {"hello": "world"}
     mock_response.raise_for_status = Mock()
-
-    mock_get = Mock(return_value=mock_response)
-    monkeypatch.setattr(github_client.requests, "get", mock_get)
+    mock_response.status_code = 200
+    mock_response.ok = True
 
     client = github_client.GitHubClient()
+
+    monkeypatch.setattr(
+        client.session,
+        "request",
+        Mock(return_value=mock_response),
+    )
 
     result = client.get("https://api.github.com/test")
 
     assert result == {"hello": "world"}
-    mock_get.assert_called_once()
+    assert client.requests_made == 1
 
+
+# ---------------------------------------------------------
+# RATE LIMIT RETRY
+# ---------------------------------------------------------
 
 def test_get_rate_limit_retry(monkeypatch, mock_sleep):
 
@@ -58,6 +78,8 @@ def test_get_rate_limit_retry(monkeypatch, mock_sleep):
     }
     first.raise_for_status = Mock()
     first.json.return_value = {}
+    first.status_code = 403
+    first.ok = False
 
     second = Mock()
     second.headers = {
@@ -66,28 +88,40 @@ def test_get_rate_limit_retry(monkeypatch, mock_sleep):
     }
     second.raise_for_status = Mock()
     second.json.return_value = {"retried": True}
-
-    mock_get = Mock(side_effect=[first, second])
-    monkeypatch.setattr(github_client.requests, "get", mock_get)
+    second.status_code = 200
+    second.ok = True
 
     client = github_client.GitHubClient()
+
+    monkeypatch.setattr(
+        client.session,
+        "request",
+        Mock(side_effect=[first, second]),
+    )
 
     result = client.get("https://api.github.com/test")
 
     assert result == {"retried": True}
-    assert mock_get.call_count == 2
 
+
+# ---------------------------------------------------------
+# GRAPHQL
+# ---------------------------------------------------------
 
 def test_graphql_request(monkeypatch):
 
     mock_response = Mock()
     mock_response.json.return_value = {"data": {"ok": True}}
     mock_response.raise_for_status = Mock()
-
-    mock_post = Mock(return_value=mock_response)
-    monkeypatch.setattr(github_client.requests, "post", mock_post)
+    mock_response.headers = {}
+    mock_response.status_code = 200
+    mock_response.ok = True
 
     client = github_client.GitHubClient()
+
+    request_mock = Mock(return_value=mock_response)
+
+    monkeypatch.setattr(client.session, "request", request_mock)
 
     query = "query { viewer { login } }"
     variables = {"a": 1}
@@ -96,9 +130,7 @@ def test_graphql_request(monkeypatch):
 
     assert result == {"data": {"ok": True}}
 
-    mock_post.assert_called_once()
-
-    args, kwargs = mock_post.call_args
+    args, kwargs = request_mock.call_args
 
     assert kwargs["json"]["query"] == query
     assert kwargs["json"]["variables"] == variables
