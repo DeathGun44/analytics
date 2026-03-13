@@ -46,7 +46,7 @@ def paginate_page_number(
     results: List[Any] = []
     page = 1
 
-    logger.debug("Requesting cursor pages (start_page=%d, start_cursor=%s)")
+    logger.debug("Requesting pages (start_page=%d)", page)
 
     while True:
 
@@ -105,7 +105,7 @@ def paginate_cursor(
     page = 1
 
     logger.debug(
-        "Requesting pages",
+        "Requesting cursor pages (start_page=%d, start_cursor=%s)",
         page,
         cursor,
     )
