@@ -33,8 +33,7 @@ def search_issues(
             "page": page_number,
         }
 
-        data = client._request(
-            "GET",
+        data = client.get(
             "https://api.github.com/search/issues",
             params=params,
         )

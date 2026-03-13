@@ -347,7 +347,7 @@ class GitHubClient:
     # PUBLIC API
     # --------------------------------------------------------
 
-    def get(self, url: str) -> JSON:
+    def get(self, url: str, **kwargs: Any) -> JSON:
         """
         Execute a GET request to a GitHub REST endpoint.
 
@@ -357,7 +357,7 @@ class GitHubClient:
         Returns:
             Parsed JSON response
         """
-        return self._request("GET", url)
+        return self._request("GET", url, **kwargs)
 
     def graphql(
         self,
