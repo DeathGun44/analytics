@@ -51,6 +51,18 @@ def ensure_output_dirs() -> None:
     ]:
         path.mkdir(parents=True, exist_ok=True)
 
+def ensure_org_dirs(org: str) -> tuple[Path, Path]:
+
+    org_name = org.replace("/", "_")
+
+    org_data_dir = ORG_DATA_DIR / org_name
+    org_charts_dir = ORG_CHARTS_DIR / org_name
+
+    org_data_dir.mkdir(parents=True, exist_ok=True)
+    org_charts_dir.mkdir(parents=True, exist_ok=True)
+
+    return org_data_dir, org_charts_dir
+
 def ensure_repo_dirs(repo: str) -> tuple[Path, Path]:
     """
     Create repo-specific output directories.
