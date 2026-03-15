@@ -8,16 +8,11 @@ import logging
 import os
 
 def setup_logging() -> None:
-    """Configure basic application logging.
-
-    The log level is determined by the ``LOG_LEVEL`` environment variable
-    (e.g. ``DEBUG``, ``INFO``, ``WARNING``, ``ERROR``, ``CRITICAL``) and
-    defaults to ``INFO`` if unset. Log messages use a simple format that
-    includes the timestamp, level name, and message.
-    """
-    level = os.getenv("LOG_LEVEL", "INFO").upper()
+    level_name = os.getenv("LOG_LEVEL", "INFO").upper()
+    level = getattr(logging, level_name, logging.INFO)
 
     logging.basicConfig(
-        level=getattr(logging, level),
-        format="%(asctime)s | %(levelname)s | %(message)s",
+        level=level,
+        format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+        force=True,
     )
