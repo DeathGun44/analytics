@@ -32,7 +32,7 @@ def bypass_pagination(monkeypatch):
 
 def test_search_issues_returns_items(mock_client, bypass_pagination):
 
-    mock_client._request.return_value = {
+    mock_client.get.return_value = {
         "items": [
             {"id": 1, "title": "issue1"},
             {"id": 2, "title": "issue2"},
@@ -51,14 +51,13 @@ def test_search_issues_returns_items(mock_client, bypass_pagination):
 
 def test_search_issues_calls_request_correctly(mock_client, bypass_pagination):
 
-    mock_client._request.return_value = {"items": []}
+    mock_client.get.return_value = {"items": []}
 
     search.search_issues(mock_client, "repo:org/repo is:issue")
 
-    args, kwargs = mock_client._request.call_args
+    args, kwargs = mock_client.get.call_args
 
-    assert args[0] == "GET"
-    assert args[1] == "https://api.github.com/search/issues"
+    assert args[0] == "https://api.github.com/search/issues"
 
     params = kwargs["params"]
 
@@ -73,7 +72,7 @@ def test_search_issues_calls_request_correctly(mock_client, bypass_pagination):
 
 def test_search_issues_filters_invalid_items(mock_client, bypass_pagination):
 
-    mock_client._request.return_value = {
+    mock_client.get.return_value = {
         "items": [
             {"id": 1},
             "bad",
@@ -94,7 +93,7 @@ def test_search_issues_filters_invalid_items(mock_client, bypass_pagination):
 
 def test_search_issues_handles_missing_items(mock_client, bypass_pagination):
 
-    mock_client._request.return_value = {}
+    mock_client.get.return_value = {}
 
     results = search.search_issues(mock_client, "test")
 
@@ -115,7 +114,7 @@ def test_search_issues_uses_pagination(monkeypatch, mock_client):
 
     monkeypatch.setattr(search, "paginate_page_number", fake_paginator)
 
-    mock_client._request.return_value = {"items": []}
+    mock_client.get.return_value = {"items": []}
 
     search.search_issues(mock_client, "test")
 
