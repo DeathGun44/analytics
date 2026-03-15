@@ -69,8 +69,6 @@ def main() -> None:
     gfi_df = filter_by_labels(df, GOOD_FIRST_ISSUE.labels)
     gfic_df = filter_by_labels(df, GOOD_FIRST_ISSUE_CANDIDATE.labels)
 
-    gfi_open_df = gfi_df[gfi_df["state"] == "open"]
-
     # --------------------------------------------------
     # Aggregations
     # --------------------------------------------------

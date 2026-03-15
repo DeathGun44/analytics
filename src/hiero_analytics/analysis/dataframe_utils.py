@@ -3,16 +3,39 @@ from __future__ import annotations
 import pandas as pd
 
 from hiero_analytics.data_sources.models import IssueRecord
-from hiero_analytics.domain.labels import UNKNOWN_DIFFICULTY
+from hiero_analytics.domain.labels import UNKNOWN_DIFFICULTY, LabelSpec
 
 
 def build_difficulty_dataframe(
     df: pd.DataFrame,
-    difficulty_specs,
+    difficulty_specs: tuple[LabelSpec, ...],
     *,
     state: str | None = None,
 ) -> pd.DataFrame:
-
+     """
+     Build an aggregate dataframe of issue counts by difficulty level.
+     Parameters
+     ----------
+     df
+         DataFrame of issues, expected to contain at least a ``labels`` column
+         (a collection of label names) and optionally a ``state`` column.
+     difficulty_specs
+         Ordered collection of difficulty label specifications. Each
+         specification must expose a ``name`` attribute and a ``matches``
+         method that accepts a sequence of labels and returns ``True`` if
+         the issue belongs to that difficulty bucket.
+     state
+         Optional state filter. If provided, only issues whose ``state``
+         column matches this value are included in the aggregation.
+     Returns
+     -------
+     pd.DataFrame
+         DataFrame with one row per difficulty level and two columns:
+         - ``difficulty``: difficulty bucket name.
+         - ``count``: number of issues falling into that bucket. Issues that
+           do not match any specification are grouped under
+           ``UNKNOWN_DIFFICULTY``.
+     """
     if state:
         df = df[df["state"] == state]
 

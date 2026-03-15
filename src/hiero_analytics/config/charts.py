@@ -65,6 +65,6 @@ ONBOARDING_COLORS = {
 
 STATE_COLORS = {
     "total": "#3D3D3D", # dark grey
-    "closed": "#28A197",# turqouise
+    "closed": "#28A197",# turquoise
     "open": "#F46A25",  # orange
 }

@@ -58,7 +58,7 @@ def plot_pie(
 
     fig, ax = create_figure()
 
-    wedges, _, autotexts = ax.pie(
+    wedges, _, _ = ax.pie(
         data[value_col],
         autopct="%1.1f%%",
         startangle=90,
