@@ -88,7 +88,6 @@ def plot_multiline(
     rotate_x : int | None
         Optional x-axis label rotation.
     """
-
     df = prepare_dataframe(df, x_col, y_col, group_col).copy()
 
     pivot = (

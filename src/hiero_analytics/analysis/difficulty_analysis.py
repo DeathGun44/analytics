@@ -3,10 +3,10 @@ from __future__ import annotations
 import pandas as pd
 
 from hiero_analytics.domain.labels import (
+    DIFFICULTY_ADVANCED,
     DIFFICULTY_BEGINNER,
     DIFFICULTY_GOOD_FIRST_ISSUE,
     DIFFICULTY_INTERMEDIATE,
-    DIFFICULTY_ADVANCED,
 )
 
 DIFFICULTY_GROUPS = {
@@ -33,14 +33,13 @@ def count_label_groups(df: pd.DataFrame, groups: dict[str, set[str]]) -> pd.Data
     groups
         Mapping of group names to sets of labels representing the group.
 
-    Returns
+    Returns:
     -------
     pd.DataFrame
         DataFrame with columns:
         - difficulty : name of the label group
         - count      : number of issues matching that group
     """
-
     if df.empty:
         return pd.DataFrame(columns=["difficulty", "count"])
 
@@ -65,12 +64,11 @@ def difficulty_distribution(df: pd.DataFrame) -> pd.DataFrame:
     df
         Issue dataframe containing a `labels` column.
 
-    Returns
+    Returns:
     -------
     pd.DataFrame
         DataFrame summarizing issue counts for each difficulty level.
     """
-
     return count_label_groups(df, DIFFICULTY_GROUPS)
 
 

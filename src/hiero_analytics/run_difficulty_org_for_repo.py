@@ -8,24 +8,20 @@ Produces:
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
-
-from hiero_analytics.config.charts import DIFFICULTY_COLORS
-from hiero_analytics.config.paths import ensure_org_dirs, ORG
-
-from hiero_analytics.data_sources.github_client import GitHubClient
-from hiero_analytics.data_sources.github_ingest import fetch_org_issues_graphql
+from datetime import UTC, datetime, timedelta
 
 from hiero_analytics.analysis.dataframe_utils import issues_to_dataframe
-from hiero_analytics.export.save import save_dataframe
-
-from hiero_analytics.plotting.bars import plot_stacked_bar
-from hiero_analytics.plotting.pie import plot_pie
-
+from hiero_analytics.config.charts import DIFFICULTY_COLORS
+from hiero_analytics.config.paths import ORG, ensure_org_dirs
+from hiero_analytics.data_sources.github_client import GitHubClient
+from hiero_analytics.data_sources.github_ingest import fetch_org_issues_graphql
 from hiero_analytics.domain.labels import (
     DIFFICULTY_LEVELS,
     UNKNOWN_DIFFICULTY,
 )
+from hiero_analytics.export.save import save_dataframe
+from hiero_analytics.plotting.bars import plot_stacked_bar
+from hiero_analytics.plotting.pie import plot_pie
 
 
 def assign_difficulty(labels, specs):
@@ -48,7 +44,7 @@ def main() -> None:
 
     df = issues_to_dataframe(issues)
 
-    cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+    cutoff = datetime.now(UTC) - timedelta(days=30)
 
     df = df[
         (df["state"] == "open") &

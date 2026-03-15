@@ -8,6 +8,7 @@ import pandas as pd
 
 from .base import create_figure, finalize_chart, prepare_dataframe
 
+
 def plot_bar(
     df: pd.DataFrame,
     x_col: str,
@@ -20,7 +21,6 @@ def plot_bar(
     """
     Plot a standard bar chart.
     """
-
     df = prepare_dataframe(df, x_col, y_col).copy()
 
     if pd.api.types.is_numeric_dtype(df[x_col]):
@@ -90,7 +90,6 @@ def plot_stacked_bar(
     rotate_x : int | None
         Optional x-axis label rotation.
     """
-
     df = prepare_dataframe(df, x_col, *stack_cols).copy()
 
     if len(stack_cols) != len(labels):

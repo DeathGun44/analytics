@@ -21,12 +21,11 @@ def build_gfi_pipeline(
     gfic_yearly
         DataFrame with columns ["year", "count"] for GFIC issues.
 
-    Returns
+    Returns:
     -------
     pd.DataFrame
         DataFrame with columns ["year", "gfi", "gfic"] sorted by year.
     """
-
     pipeline = (
         gfi_yearly.rename(columns={"count": "gfi"})
         .merge(
@@ -59,12 +58,11 @@ def build_onboarding_repo_pipeline(
     gfic_total_by_repo
         DataFrame with columns ["repo", "count"] for GFIC issues.
 
-    Returns
+    Returns:
     -------
     pd.DataFrame
         DataFrame with columns ["repo", "gfi", "gfic"], sorted by GFI count.
     """
-
     gfi = gfi_total_by_repo.rename(columns={"count": "gfi"})
     gfic = gfic_total_by_repo.rename(columns={"count": "gfic"})
 

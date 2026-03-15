@@ -1,9 +1,10 @@
 from __future__ import annotations
-from pathlib import Path
 
 import pandas as pd
+
 from hiero_analytics.data_sources.models import IssueRecord
 from hiero_analytics.domain.labels import UNKNOWN_DIFFICULTY
+
 
 def build_difficulty_dataframe(
     df: pd.DataFrame,
@@ -65,12 +66,11 @@ def issues_to_dataframe(issues: list[IssueRecord]) -> pd.DataFrame:
     issues
         List of IssueRecord objects retrieved from the data source layer.
 
-    Returns
+    Returns:
     -------
     pd.DataFrame
         DataFrame containing one row per issue.
     """
-
     return pd.DataFrame(
         [
             {
@@ -100,12 +100,11 @@ def filter_by_labels(df: pd.DataFrame, labels: set[str]) -> pd.DataFrame:
     labels
         Set of label names to filter for.
 
-    Returns
+    Returns:
     -------
     pd.DataFrame
         Subset of the dataframe containing only issues with matching labels.
     """
-
     if df.empty:
         return df.copy()
 
@@ -126,13 +125,12 @@ def count_by(df: pd.DataFrame, *cols: str) -> pd.DataFrame:
     *cols
         One or more column names to group by.
 
-    Returns
+    Returns:
     -------
     pd.DataFrame
         DataFrame containing the grouping columns and a `count` column
         representing the number of issues in each group.
     """
-
     if df.empty:
         return pd.DataFrame(columns=[*cols, "count"])
 

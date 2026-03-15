@@ -3,9 +3,8 @@ Defines configuration constants for paths and directories used in the analytics 
 """
 from __future__ import annotations
 
-from pathlib import Path
-
 import os
+from pathlib import Path
 
 ORG = os.getenv("GITHUB_ORG", "hiero-ledger")
 REPO = os.getenv("GITHUB_REPO", "hiero-sdk-python")
@@ -70,7 +69,6 @@ def ensure_repo_dirs(repo: str) -> tuple[Path, Path]:
     Returns:
         repo_data_dir, repo_charts_dir
     """
-
     repo_name = repo.replace("/", "_")
 
     repo_data_dir = REPO_DATA_DIR / repo_name

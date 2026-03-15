@@ -7,6 +7,7 @@ if it is not set, the default level ``INFO`` is used.
 import logging
 import os
 
+
 def setup_logging() -> None:
     level_name = os.getenv("LOG_LEVEL", "INFO").upper()
     level = getattr(logging, level_name, logging.INFO)

@@ -1,23 +1,19 @@
 from __future__ import annotations
 
+from hiero_analytics.analysis.dataframe_utils import (
+    count_by,
+    filter_by_labels,
+    issues_to_dataframe,
+)
+from hiero_analytics.analysis.onboarding_pipeline import (
+    build_gfi_pipeline,
+)
 from hiero_analytics.config.paths import ORG, REPO, ensure_output_dirs
-
 from hiero_analytics.data_sources.github_client import GitHubClient
 from hiero_analytics.data_sources.github_ingest import fetch_repo_issues_graphql
-
-from hiero_analytics.analysis.dataframe_utils import (
-    issues_to_dataframe,
-    filter_by_labels,
-    count_by,
-)
-
 from hiero_analytics.domain.labels import (
     GOOD_FIRST_ISSUE,
     GOOD_FIRST_ISSUE_CANDIDATE,
-)
-
-from hiero_analytics.analysis.onboarding_pipeline import (
-    build_gfi_pipeline,
 )
 
 

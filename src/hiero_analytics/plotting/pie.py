@@ -7,6 +7,8 @@ import pandas as pd
 from hiero_analytics.domain.labels import DIFFICULTY_ORDER
 
 from .base import create_figure, finalize_chart, prepare_dataframe
+
+
 def plot_pie(
     df: pd.DataFrame,
     label_col: str,
@@ -33,7 +35,6 @@ def plot_pie(
     colors : dict[str, str], optional
         Mapping of label -> color.
     """
-
     data = prepare_dataframe(df, label_col, value_col)
 
     if data.empty:

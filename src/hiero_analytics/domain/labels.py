@@ -19,11 +19,10 @@ class LabelSpec:
             {l.lower() for l in self.labels},
         )
 
-    def __or__(self, other: "LabelSpec") -> "LabelSpec":
+    def __or__(self, other: LabelSpec) -> LabelSpec:
         """
         Combine label groups.
         """
-
         return LabelSpec(
             name=f"{self.name} + {other.name}",
             labels=self.labels | other.labels,

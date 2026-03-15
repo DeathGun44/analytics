@@ -8,35 +8,29 @@ Produces analytics for:
 """
 
 from __future__ import annotations
+
 import pandas as pd
 
-from hiero_analytics.config.charts import ONBOARDING_COLORS, STATE_COLORS
-from hiero_analytics.config.paths import ensure_org_dirs, ORG
-
-from hiero_analytics.data_sources.github_client import GitHubClient
-from hiero_analytics.data_sources.github_ingest import fetch_org_issues_graphql
-
-from hiero_analytics.plotting.bars import plot_stacked_bar
-from hiero_analytics.plotting.lines import plot_multiline
-
 from hiero_analytics.analysis.dataframe_utils import (
-    issues_to_dataframe,
-    filter_by_labels,
     count_by,
+    filter_by_labels,
+    issues_to_dataframe,
 )
-
-from hiero_analytics.export.save import save_dataframe
-
-from hiero_analytics.domain.labels import (
-    GOOD_FIRST_ISSUE,
-    GOOD_FIRST_ISSUE_CANDIDATE,
-)
-
 from hiero_analytics.analysis.onboarding_pipeline import (
     build_gfi_pipeline,
     build_onboarding_repo_pipeline,
 )
-
+from hiero_analytics.config.charts import ONBOARDING_COLORS, STATE_COLORS
+from hiero_analytics.config.paths import ORG, ensure_org_dirs
+from hiero_analytics.data_sources.github_client import GitHubClient
+from hiero_analytics.data_sources.github_ingest import fetch_org_issues_graphql
+from hiero_analytics.domain.labels import (
+    GOOD_FIRST_ISSUE,
+    GOOD_FIRST_ISSUE_CANDIDATE,
+)
+from hiero_analytics.export.save import save_dataframe
+from hiero_analytics.plotting.bars import plot_stacked_bar
+from hiero_analytics.plotting.lines import plot_multiline
 
 STACK_COLS = ["gfic", "gfi"]
 STACK_LABELS = [
@@ -54,7 +48,6 @@ def add_total_state(df: pd.DataFrame) -> pd.DataFrame:
 
 def main() -> None:
     """Execute onboarding analytics pipeline."""
-
     org_data_dir, org_charts_dir = ensure_org_dirs(ORG)
 
     print(f"Running onboarding analytics for org: {ORG}")

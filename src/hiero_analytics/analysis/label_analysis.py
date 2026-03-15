@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import pandas as pd
-
 from hiero_analytics.data_sources.models import IssueRecord
 from hiero_analytics.domain.labels import LabelSpec
 
@@ -28,12 +26,11 @@ def _count_issues(
     closed_only
         If True, only issues with state "closed" are included.
 
-    Returns
+    Returns:
     -------
     dict[str, int]
         Mapping of spec name → number of matching issues.
     """
-
     results = {spec.name: 0 for spec in specs}
 
     for issue in issues:
@@ -68,12 +65,11 @@ def count_issues_by_label_specs(
     specs
         Tuple of LabelSpec definitions used for classification.
 
-    Returns
+    Returns:
     -------
     dict[str, int]
         Mapping of spec name → total issue count.
     """
-
     return _count_issues(issues, specs)
 
 
@@ -94,10 +90,9 @@ def count_closed_issues_by_label_specs(
     specs
         Tuple of LabelSpec definitions used for classification.
 
-    Returns
+    Returns:
     -------
     dict[str, int]
         Mapping of spec name → number of closed issues matching the spec.
     """
-
     return _count_issues(issues, specs, closed_only=True)
