@@ -95,10 +95,19 @@ def plot_stacked_bar(
     if len(stack_cols) != len(labels):
         raise ValueError("stack_cols and labels must have the same length")
 
-    # Sort bars by total size for readability
-    df["total"] = df[stack_cols].sum(axis=1)
-    df = df.sort_values("total", ascending=False)
-
+    # Choose sorting strategy based on x-axis type:
+    # - For numeric/datetime-like x_col, preserve natural/chronological order.
+    # - For categorical x_col, sort bars by total size for readability.
+    is_numeric_x = pd.api.types.is_numeric_dtype(df[x_col])
+    is_datetime_x = (
+        pd.api.types.is_datetime64_any_dtype(df[x_col])
+        or pd.api.types.is_period_dtype(df[x_col])
+    )
+    if is_numeric_x or is_datetime_x:
+        df = df.sort_values(x_col)
+    else:
+        df["total"] = df[stack_cols].sum(axis=1)
+        df = df.sort_values("total", ascending=False)
     fig, ax = create_figure()
 
     bottom = np.zeros(len(df))

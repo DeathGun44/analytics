@@ -12,12 +12,13 @@ def build_difficulty_dataframe(
     *,
     state: str | None = None,
 ) -> pd.DataFrame:
-     """
-     Build an aggregate dataframe of issue counts by difficulty level.
-     Parameters
-     ----------
-     df
-         DataFrame of issues, expected to contain at least a ``labels`` column
+    """
+    Build an aggregate dataframe of issue counts by difficulty level.
+
+    Parameters
+    ----------
+    df
+        DataFrame of issues, expected to contain at least a ``labels`` column
          (a collection of label names) and optionally a ``state`` column.
      difficulty_specs
          Ordered collection of difficulty label specifications. Each
@@ -35,7 +36,7 @@ def build_difficulty_dataframe(
          - ``count``: number of issues falling into that bucket. Issues that
            do not match any specification are grouped under
            ``UNKNOWN_DIFFICULTY``.
-     """
+    """
     if state:
         df = df[df["state"] == state]
 

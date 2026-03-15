@@ -29,6 +29,11 @@ class LabelSpec:
         )
     
     def matches(self, labels: set[str]) -> bool:
+        """
+        Return True if any of the given labels matches this spec's labels.
+        The input is a set of label names; matching is case-insensitive and
+        succeeds when there is at least one common label.
+        """
         normalized = {l.lower() for l in labels}
         return bool(normalized & self.labels)
 
