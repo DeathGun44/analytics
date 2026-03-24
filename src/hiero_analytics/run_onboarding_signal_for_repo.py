@@ -45,7 +45,7 @@ def plot_issue_vs_contributors(
     output_path: pathlib.Path,
     *,
     issue_date_col: str = "created_at",
-    contrib_date_col: str = "pr_created_at",
+    contrib_date_col: str = "pr_merged_at",
     issue_label: str = "Issues",
     contrib_label: str = "Contributors",
     title: str,
@@ -112,9 +112,9 @@ def run():
     gfi_pr_df = filter_gfi_prs(pr_df)
 
     # unique contributors (first PR only)
-    contrib_df = gfi_pr_df.dropna(subset=["author"]).sort_values("pr_created_at").drop_duplicates("author")
+    contrib_df = gfi_pr_df.dropna(subset=["author"]).sort_values("pr_merged_at").drop_duplicates("author")
 
-    contrib_ts = cumulative_timeseries(contrib_df, "pr_created_at")
+    contrib_ts = cumulative_timeseries(contrib_df, "pr_merged_at")
 
     def plot_onboarding_signal(
         gfi_ts: pd.DataFrame,
@@ -161,10 +161,10 @@ def run():
         # -------------------------
         ax2: Axes = ax1.twinx()
 
-        contrib = contrib_ts.sort_values("pr_created_at")
+        contrib = contrib_ts.sort_values("pr_merged_at")
 
         ax2.plot(
-            contrib["pr_created_at"],
+            contrib["pr_merged_at"],
             contrib["count"],
             color=PRIMARY_PALETTE[4],
             linewidth=2.6,
@@ -173,7 +173,7 @@ def run():
 
         annotate_endpoint_badge(
             ax2,
-            x=contrib["pr_created_at"].iloc[-1],
+            x=contrib["pr_merged_at"].iloc[-1],
             y=contrib["count"].iloc[-1],
             text=f"Contrib {int(contrib['count'].iloc[-1])}",
             color=PRIMARY_PALETTE[4],
@@ -224,11 +224,11 @@ def run():
         # -------------------------
         # Unique contributors per difficulty
         # -------------------------
-        contrib_df_subset = prs_subset.dropna(subset=["author"]).sort_values("pr_created_at").drop_duplicates("author")
+        contrib_df_subset = prs_subset.dropna(subset=["author"]).sort_values("pr_merged_at").drop_duplicates("author")
 
         contrib_ts_subset = cumulative_timeseries(
             contrib_df_subset,
-            "pr_created_at",
+            "pr_merged_at",
         )
 
         if issues_ts_subset.empty or contrib_ts_subset.empty:

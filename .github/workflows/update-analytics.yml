@@ -36,7 +36,7 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      - name: Run onboarding analytics
+      - name: Run gfic gfi analytics
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: uv run python -m hiero_analytics.run_gfic_gfi_org

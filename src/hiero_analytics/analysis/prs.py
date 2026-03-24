@@ -57,7 +57,7 @@ def first_time_contributors(df: pd.DataFrame) -> pd.DataFrame:
 
     return (
         df.dropna(subset=["author"])
-        .sort_values("pr_created_at")
+        .sort_values("pr_merged_at")
         .groupby("author", as_index=False)
         .first()
     )
