@@ -51,9 +51,7 @@ def plot_issue_vs_contributors(
     title: str,
 ) -> None:
 
-    issues = issues_ts.sort_values(issue_date_col).rename(
-        columns={issue_date_col: "date", "count": "issue_count"}
-    )
+    issues = issues_ts.sort_values(issue_date_col).rename(columns={issue_date_col: "date", "count": "issue_count"})
 
     contrib = contrib_ts.sort_values(contrib_date_col).rename(
         columns={contrib_date_col: "date", "count": "contrib_count"}
@@ -78,6 +76,7 @@ def plot_issue_vs_contributors(
         ylabel=f"Cumulative {contrib_label}",
         output_path=output_path,
     )
+
 
 def run():
     client = GitHubClient()
@@ -113,17 +112,9 @@ def run():
     gfi_pr_df = filter_gfi_prs(pr_df)
 
     # unique contributors (first PR only)
-    contrib_df = (
-        gfi_pr_df
-        .dropna(subset=["author"])
-        .sort_values("pr_created_at")
-        .drop_duplicates("author")
-    )
+    contrib_df = gfi_pr_df.dropna(subset=["author"]).sort_values("pr_created_at").drop_duplicates("author")
 
     contrib_ts = cumulative_timeseries(contrib_df, "pr_created_at")
-
-
-
 
     def plot_onboarding_signal(
         gfi_ts: pd.DataFrame,
@@ -203,7 +194,8 @@ def run():
             output_path=output_path,
             legend=False,
             grid_axis="y",
-        ) 
+        )
+
     # ----------------------------------------
     # Plot
     # ----------------------------------------
@@ -216,33 +208,23 @@ def run():
     # Per-difficulty plots
     # ----------------------------------------
     for spec in DIFFICULTY_LEVELS:
-
         safe_name = spec.name.replace(" ", "_").lower()
 
         # -------------------------
         # Filter issues by difficulty
         # -------------------------
-        issues_subset = issues_df[
-            issues_df["labels"].apply(lambda xs: spec.matches(set(xs or [])))
-        ]
+        issues_subset = issues_df[issues_df["labels"].apply(lambda xs: spec.matches(set(xs or [])))]
         issues_ts_subset = cumulative_timeseries(issues_subset, "created_at")
 
         # -------------------------
         # Filter PRs by difficulty (via issue_labels)
         # -------------------------
-        prs_subset = pr_df[
-            pr_df["issue_labels"].apply(lambda xs: spec.matches(set(xs or [])))
-        ]
+        prs_subset = pr_df[pr_df["issue_labels"].apply(lambda xs: spec.matches(set(xs or [])))]
 
         # -------------------------
         # Unique contributors per difficulty
         # -------------------------
-        contrib_df_subset = (
-            prs_subset
-            .dropna(subset=["author"])
-            .sort_values("pr_created_at")
-            .drop_duplicates("author")
-        )
+        contrib_df_subset = prs_subset.dropna(subset=["author"]).sort_values("pr_created_at").drop_duplicates("author")
 
         contrib_ts_subset = cumulative_timeseries(
             contrib_df_subset,
@@ -264,6 +246,7 @@ def run():
             contrib_label=f"{spec.name} Contributors",
             title=f"{short_repo}: {spec.name} Onboarding Efficiency",
         )
-    
+
+
 if __name__ == "__main__":
     run()

@@ -32,6 +32,7 @@ PLOT_DIFFICULTY_ORDER = [
 # Helpers
 # =========================================================
 
+
 def assign_difficulty(labels):
     for spec in DIFFICULTY_LEVELS:
         if spec.matches(set(labels or [])):
@@ -55,11 +56,7 @@ def build_max_difficulty_distribution(pr_df: pd.DataFrame) -> pd.DataFrame:
     df["difficulty"] = df["issue_labels"].apply(assign_difficulty)
 
     # count per contributor per difficulty
-    per_user = (
-        df.groupby(["author", "difficulty"])
-        .size()
-        .unstack(fill_value=0)
-    )
+    per_user = df.groupby(["author", "difficulty"]).size().unstack(fill_value=0)
     # define difficulty order (low → high)
     order = PLOT_DIFFICULTY_ORDER
 
@@ -71,12 +68,7 @@ def build_max_difficulty_distribution(pr_df: pd.DataFrame) -> pd.DataFrame:
 
     per_user["max_difficulty"] = per_user.apply(get_max, axis=1)
     # count contributors by max difficulty
-    result = (
-        per_user["max_difficulty"]
-        .value_counts()
-        .rename_axis("difficulty")
-        .reset_index(name="count")
-    )
+    result = per_user["max_difficulty"].value_counts().rename_axis("difficulty").reset_index(name="count")
 
     result = result[result["difficulty"].isin(order)]
     # enforce correct order
@@ -89,9 +81,12 @@ def build_max_difficulty_distribution(pr_df: pd.DataFrame) -> pd.DataFrame:
     result = result.sort_values("difficulty")
 
     return result
+
+
 # =========================================================
 # Core: average contribution mix
 # =========================================================
+
 
 def build_avg_contribution_mix(pr_df: pd.DataFrame) -> pd.DataFrame:
 
@@ -100,11 +95,7 @@ def build_avg_contribution_mix(pr_df: pd.DataFrame) -> pd.DataFrame:
     df["difficulty"] = df["issue_labels"].apply(assign_difficulty)
 
     # count per contributor per difficulty
-    per_user = (
-        df.groupby(["author", "difficulty"])
-        .size()
-        .unstack(fill_value=0)
-    )
+    per_user = df.groupby(["author", "difficulty"]).size().unstack(fill_value=0)
 
     per_user["total"] = per_user.sum(axis=1)
 
@@ -112,12 +103,7 @@ def build_avg_contribution_mix(pr_df: pd.DataFrame) -> pd.DataFrame:
     per_user["contributor_type"] = per_user.apply(classify_contributor, axis=1)
 
     # average per contributor type
-    avg = (
-        per_user
-        .groupby("contributor_type")
-        .mean(numeric_only=True)
-        .reset_index()
-    )
+    avg = per_user.groupby("contributor_type").mean(numeric_only=True).reset_index()
 
     return avg
 
@@ -135,6 +121,7 @@ def plot_max_difficulty(df: pd.DataFrame, output_path, repo: str):
         output_path=output_path,
         rotate_x=30,
     )
+
 
 def plot_avg_mix(df: pd.DataFrame, output_path, repo: str):
 
@@ -174,9 +161,12 @@ def plot_avg_mix(df: pd.DataFrame, output_path, repo: str):
         output_path=output_path,
         rotate_x=30,
     )
+
+
 # =========================================================
 # Main
 # =========================================================
+
 
 def main():
     repo = "hiero-sdk-python"
@@ -210,8 +200,6 @@ def main():
         repo,
     )
 
-
-
     plot_max_difficulty(
         build_max_difficulty_distribution(pr_df),
         repo_charts_dir / "max_difficulty_distribution.png",
@@ -219,6 +207,7 @@ def main():
     )
 
     print("Done.")
+
 
 if __name__ == "__main__":
     main()
