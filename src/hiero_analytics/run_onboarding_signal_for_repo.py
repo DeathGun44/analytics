@@ -1,5 +1,5 @@
 import pathlib
-
+import numpy as np
 from matplotlib.axes import Axes
 
 from hiero_analytics.config.charts import PRIMARY_PALETTE
@@ -38,6 +38,97 @@ short_repo = REPO.split("/")[-1]
 
 from hiero_analytics.config.paths import ensure_repo_dirs
 
+def plot_onboarding_relationship(
+    gfi_ts: pd.DataFrame,
+    contrib_ts: pd.DataFrame,
+    output_path: pathlib.Path,
+) -> None:
+    """
+    Scatter + regression:
+    Relationship between cumulative GFI supply and cumulative contributors
+    """
+
+    if gfi_ts.empty or contrib_ts.empty:
+        raise ValueError("Input time series cannot be empty")
+
+    # -------------------------
+    # Align time series
+    # -------------------------
+    gfi = gfi_ts.sort_values("created_at").rename(
+        columns={"created_at": "date", "count": "gfi_count"}
+    )
+
+    contrib = contrib_ts.sort_values("pr_created_at").rename(
+        columns={"pr_created_at": "date", "count": "contrib_count"}
+    )
+
+    # Merge on nearest date (forward fill to align cumulative curves)
+    df = pd.merge_asof(
+        gfi,
+        contrib,
+        on="date",
+        direction="forward",
+    ).dropna()
+
+    if df.empty:
+        raise ValueError("No overlapping data after alignment")
+
+    # -------------------------
+    # Regression
+    # -------------------------
+    x = df["gfi_count"]
+    y = df["contrib_count"]
+
+    slope, intercept = np.polyfit(x, y, 1)
+    y_pred = slope * x + intercept
+
+    # -------------------------
+    # Plot
+    # -------------------------
+    fig, ax = create_figure()
+
+    # Scatter
+    ax.scatter(
+        x,
+        y,
+        color=PRIMARY_PALETTE[3],
+        alpha=0.7,
+        s=28,
+        zorder=3,
+    )
+
+    # Regression line
+    ax.plot(
+        x,
+        y_pred,
+        color=PRIMARY_PALETTE[1],
+        linewidth=2.2,
+        zorder=4,
+    )
+
+    # Optional annotation (slope)
+    ax.text(
+        0.02,
+        0.95,
+        f"slope ≈ {slope:.2f}",
+        transform=ax.transAxes,
+        fontsize=10,
+        verticalalignment="top",
+    )
+
+    # -------------------------
+    # Finalize
+    # -------------------------
+    finalize_chart(
+        fig=fig,
+        ax=ax,
+        title=f"{short_repo}: GFI Supply vs Contributor Demand (Scatter + Regression)",
+        xlabel="Cumulative Good First Issues",
+        ylabel="Cumulative Contributors",
+        output_path=output_path,
+        legend=False,
+        grid_axis="both",
+    )
 
 def run():
     client = GitHubClient()
@@ -168,6 +259,11 @@ def run():
         pathlib.Path(repo_charts_dir) / "onboarding_signal.png",
     )
 
+    plot_onboarding_relationship(
+        gfi_ts,
+        contrib_ts,
+        pathlib.Path(repo_charts_dir) / "onboarding_relationship.png",
+    )
 
 if __name__ == "__main__":
     run()
