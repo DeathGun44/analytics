@@ -46,6 +46,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: uv run python -m hiero_analytics.run_difficulty_org_for_repo
 
+      - name: Run onboarding analytics
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: uv run python -m hiero_analytics.run_onboarding_signal_for_repo
+
       - name: Check for changes
         id: check_changes
         run: |
