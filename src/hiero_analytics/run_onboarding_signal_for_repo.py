@@ -20,15 +20,15 @@ from hiero_analytics.analysis.timeseries import cumulative_timeseries
 from hiero_analytics.analysis.prs import (
     prs_to_dataframe,
     filter_gfi_prs,
-    first_time_contributors,
 )
 
-from hiero_analytics.domain.labels import ALL_ONBOARDING
+from hiero_analytics.domain.labels import ALL_ONBOARDING, DIFFICULTY_LEVELS
 import matplotlib.pyplot as plt
 import pandas as pd
 
 from hiero_analytics.plotting.base import create_figure, finalize_chart
 from hiero_analytics.plotting.primitives import annotate_endpoint_badge
+from hiero_analytics.plotting.scatter import plot_scatter_with_regression
 
 setup_logging()
 
@@ -38,96 +38,45 @@ short_repo = REPO.split("/")[-1]
 
 from hiero_analytics.config.paths import ensure_repo_dirs
 
-def plot_onboarding_relationship(
-    gfi_ts: pd.DataFrame,
+
+def plot_issue_vs_contributors(
+    issues_ts: pd.DataFrame,
     contrib_ts: pd.DataFrame,
     output_path: pathlib.Path,
+    *,
+    issue_date_col: str = "created_at",
+    contrib_date_col: str = "pr_created_at",
+    issue_label: str = "Issues",
+    contrib_label: str = "Contributors",
+    title: str,
 ) -> None:
-    """
-    Scatter + regression:
-    Relationship between cumulative GFI supply and cumulative contributors
-    """
 
-    if gfi_ts.empty or contrib_ts.empty:
-        raise ValueError("Input time series cannot be empty")
-
-    # -------------------------
-    # Align time series
-    # -------------------------
-    gfi = gfi_ts.sort_values("created_at").rename(
-        columns={"created_at": "date", "count": "gfi_count"}
+    issues = issues_ts.sort_values(issue_date_col).rename(
+        columns={issue_date_col: "date", "count": "issue_count"}
     )
 
-    contrib = contrib_ts.sort_values("pr_created_at").rename(
-        columns={"pr_created_at": "date", "count": "contrib_count"}
+    contrib = contrib_ts.sort_values(contrib_date_col).rename(
+        columns={contrib_date_col: "date", "count": "contrib_count"}
     )
 
-    # Merge on nearest date (forward fill to align cumulative curves)
     df = pd.merge_asof(
-        gfi,
+        issues,
         contrib,
         on="date",
-        direction="forward",
+        direction="backward",
     ).dropna()
 
     if df.empty:
-        raise ValueError("No overlapping data after alignment")
+        raise ValueError("No overlapping data")
 
-    # -------------------------
-    # Regression
-    # -------------------------
-    x = df["gfi_count"]
-    y = df["contrib_count"]
-
-    slope, intercept = np.polyfit(x, y, 1)
-    y_pred = slope * x + intercept
-
-    # -------------------------
-    # Plot
-    # -------------------------
-    fig, ax = create_figure()
-
-    # Scatter
-    ax.scatter(
-        x,
-        y,
-        color=PRIMARY_PALETTE[3],
-        alpha=0.7,
-        s=28,
-        zorder=3,
-    )
-
-    # Regression line
-    ax.plot(
-        x,
-        y_pred,
-        color=PRIMARY_PALETTE[1],
-        linewidth=2.2,
-        zorder=4,
-    )
-
-    # Optional annotation (slope)
-    ax.text(
-        0.02,
-        0.95,
-        f"slope ≈ {slope:.2f}",
-        transform=ax.transAxes,
-        fontsize=10,
-        verticalalignment="top",
-    )
-
-    # -------------------------
-    # Finalize
-    # -------------------------
-    finalize_chart(
-        fig=fig,
-        ax=ax,
-        title=f"{short_repo}: GFI Supply vs Contributor Demand (Scatter + Regression)",
-        xlabel="Cumulative Good First Issues",
-        ylabel="Cumulative Contributors",
+    plot_scatter_with_regression(
+        df,
+        x_col="issue_count",
+        y_col="contrib_count",
+        title=title,
+        xlabel=f"Cumulative {issue_label}",
+        ylabel=f"Cumulative {contrib_label}",
         output_path=output_path,
-        legend=False,
-        grid_axis="both",
     )
 
 def run():
@@ -164,9 +113,14 @@ def run():
     gfi_pr_df = filter_gfi_prs(pr_df)
 
     # unique contributors (first PR only)
-    first_contribs = first_time_contributors(gfi_pr_df)
+    contrib_df = (
+        gfi_pr_df
+        .dropna(subset=["author"])
+        .sort_values("pr_created_at")
+        .drop_duplicates("author")
+    )
 
-    contrib_ts = cumulative_timeseries(first_contribs, "pr_created_at")
+    contrib_ts = cumulative_timeseries(contrib_df, "pr_created_at")
 
 
 
@@ -258,12 +212,58 @@ def run():
         contrib_ts,
         pathlib.Path(repo_charts_dir) / "onboarding_signal.png",
     )
+    # ----------------------------------------
+    # Per-difficulty plots
+    # ----------------------------------------
+    for spec in DIFFICULTY_LEVELS:
 
-    plot_onboarding_relationship(
-        gfi_ts,
-        contrib_ts,
-        pathlib.Path(repo_charts_dir) / "onboarding_relationship.png",
-    )
+        safe_name = spec.name.replace(" ", "_").lower()
 
+        # -------------------------
+        # Filter issues by difficulty
+        # -------------------------
+        issues_subset = issues_df[
+            issues_df["labels"].apply(lambda xs: spec.matches(set(xs or [])))
+        ]
+        issues_ts_subset = cumulative_timeseries(issues_subset, "created_at")
+
+        # -------------------------
+        # Filter PRs by difficulty (via issue_labels)
+        # -------------------------
+        prs_subset = pr_df[
+            pr_df["issue_labels"].apply(lambda xs: spec.matches(set(xs or [])))
+        ]
+
+        # -------------------------
+        # Unique contributors per difficulty
+        # -------------------------
+        contrib_df_subset = (
+            prs_subset
+            .dropna(subset=["author"])
+            .sort_values("pr_created_at")
+            .drop_duplicates("author")
+        )
+
+        contrib_ts_subset = cumulative_timeseries(
+            contrib_df_subset,
+            "pr_created_at",
+        )
+
+        if issues_ts_subset.empty or contrib_ts_subset.empty:
+            print(f"Skipping {spec.name}: no data")
+            continue
+
+        # -------------------------
+        # Plot
+        # -------------------------
+        plot_issue_vs_contributors(
+            issues_ts_subset,
+            contrib_ts_subset,
+            output_path=repo_charts_dir / f"{safe_name}.png",
+            issue_label=f"{spec.name} Issues",
+            contrib_label=f"{spec.name} Contributors",
+            title=f"{short_repo}: {spec.name} Onboarding Efficiency",
+        )
+    
 if __name__ == "__main__":
     run()
