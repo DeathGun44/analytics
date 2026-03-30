@@ -5,14 +5,7 @@ from hiero_analytics.config.paths import ORG
 from hiero_analytics.data_sources.github_client import GitHubClient
 from hiero_analytics.data_sources.github_ingest import fetch_org_repos_graphql
 
-setup_logging(
-    modules=(
-        "hiero_analytics.data_sources.github_client",
-        "hiero_analytics.data_sources.github_ingest",
-        "hiero_analytics.data_sources.pagination",
-        "hiero_analytics.data_sources.rate_limit",
-    )
-)
+setup_logging(modules="hiero_analytics")
 
 ORGANIZATION = ORG
 

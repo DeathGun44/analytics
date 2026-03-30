@@ -4,14 +4,7 @@ from hiero_analytics.config.logging import setup_logging
 from hiero_analytics.data_sources.github_client import GitHubClient
 from hiero_analytics.data_sources.github_search import search_issues
 
-setup_logging(
-    modules=(
-        "hiero_analytics.data_sources.github_client",
-        "hiero_analytics.data_sources.github_search",
-        "hiero_analytics.data_sources.pagination",
-        "hiero_analytics.data_sources.rate_limit",
-    )
-)
+setup_logging(modules="hiero_analytics")
 
 
 def main() -> None:
