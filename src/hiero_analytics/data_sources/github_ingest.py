@@ -19,14 +19,10 @@ from .cache import (
     load_records_cache,
     save_records_cache,
 )
+from hiero_analytics.config.paths import load_query
+
 from .github_client import GitHubClient
-from .github_queries import (
-    CONTRIBUTOR_ACTIVITY_QUERY,
-    CONTRIBUTOR_MERGED_PRS_COUNT_QUERY,
-    ISSUES_QUERY,
-    MERGED_PR_QUERY,
-    REPOS_QUERY,
-)
+
 from .models import (
     BaseRecord,
     ContributorActivityRecord,
@@ -40,7 +36,6 @@ from .pagination import extract_graphql_cursor_page, paginate_cursor
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseRecord)
-
 
 def _cache_kwargs(
     use_cache: bool | None,
@@ -185,6 +180,7 @@ def fetch_org_repos_graphql(
     """
     Fetch all repository full names for an organization using GraphQL.
     """
+    REPOS_QUERY = load_query("repos")
     return fetch_github_resource(
         client, REPOS_QUERY, {"org": org}, RepositoryRecord, ["organization", "repositories"],
         cache_key="org_repos", cache_scope=org, cache_parameters={"org": org},
@@ -207,6 +203,7 @@ def fetch_repo_issues_graphql(
     refresh: bool = False
     ) -> list[IssueRecord]:
     """Fetch all issues for a repository using GraphQL."""
+    ISSUES_QUERY = load_query("issues")
     norm_states = [s.upper() for s in states] if states else None
     return fetch_github_resource(
         client, ISSUES_QUERY, {"owner": owner, "repo": repo, "states": norm_states}, IssueRecord, ["repository", "issues"],
@@ -251,6 +248,7 @@ def fetch_repo_merged_pr_difficulty_graphql(
     """
     Fetch merged pull requests and their linked closing issues for a repository.
     """
+    MERGED_PR_QUERY = load_query("merged_pr")
     return fetch_github_resource(
         client, MERGED_PR_QUERY, {"owner": owner, "repo": repo}, PullRequestDifficultyRecord, ["repository", "pullRequests"],
         cache_key="repo_merged_pr_difficulty", cache_scope=f"{owner}_{repo}", 
@@ -302,6 +300,7 @@ def fetch_repo_contributor_activity_graphql(
     - reviewed_pull_request
     - merged_pull_request
     """
+    CONTRIBUTOR_ACTIVITY_QUERY = load_query("contributor_activity")
     cutoff = datetime.now(timezone.utc) - timedelta(days=lookback_days)
     return fetch_github_resource(
         client, CONTRIBUTOR_ACTIVITY_QUERY, {"owner": owner, "repo": repo}, ContributorActivityRecord, ["repository", "pullRequests"],
@@ -351,6 +350,7 @@ def fetch_repo_contributor_merged_pr_count_graphql(
     """
     Fetch contributor merged pull request count for a specific user in a repository.
     """
+    CONTRIBUTOR_MERGED_PRS_COUNT_QUERY = load_query("contributor_merged_prs_count")
     records = fetch_github_resource(
         client, CONTRIBUTOR_MERGED_PRS_COUNT_QUERY, {"searchQuery": f"is:pr is:merged author:{login} repo:{owner}/{repo}"},
         ContributorMergedPRCountRecord, ["search"],
