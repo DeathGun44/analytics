@@ -3,7 +3,7 @@ query CONTRIBUTOR_ACTIVITY_QUERY($owner:String!, $repo:String!, $cursor:String) 
     pullRequests(
       first:100
       after:$cursor
-      orderBy:{field:UPDATED_AT, direction:DESC}
+      orderBy: { field: UPDATED_AT, direction: DESC }
     ) {
       pageInfo {
         hasNextPage
