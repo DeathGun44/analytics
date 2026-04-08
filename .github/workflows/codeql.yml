@@ -30,14 +30,13 @@ jobs:
                     - language: python
                       build-mode: none
         steps:
-            - name: Checkout repository
-              uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-
             - name: Harden the runner (Audit all outbound calls)
               uses: step-security/harden-runner@fe104658747b27e96e4f7e80cd0a94068e53901d # v2.16.1
               with:
                   egress-policy: audit
 
+            - name: Checkout repository
+              uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
             - name: Initialize CodeQL
               uses: github/codeql-action/init@c10b8064de6f491fea524254123dbe5e09572f13 # v4.3.5
               with:
