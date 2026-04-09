@@ -61,6 +61,16 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: uv run python -m hiero_analytics.run_maintainer_pipeline_org
 
+      - name: Run scorecard analytics
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: uv run python -m hiero_analytics.run_scorecard_for_org
+
+      - name: Run codeowner and runner analytics
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: uv run python -m hiero_analytics.run_codeowner_and_runner
+
       - name: Check for changes
         id: check_changes
         run: |
@@ -129,6 +139,8 @@ jobs:
             - Updated CSV data files in `outputs/data/`
             - Updated PNG charts in `outputs/charts/`
             - Refreshed cached data
+            - Updated OpenSSF Scorecard scores and check breakdowns
+            - Updated CODEOWNERS compliance and runner-type reports
             
             **Note:** This is an automated PR. Please review the changes before merging.
           branch: analytics-refresh-${{ github.run_number }}
