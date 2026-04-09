@@ -28,7 +28,7 @@ This report categorizes runners into **Self-Hosted**, **Standard (GitHub-hosted)
 | **hiero-sdk-go** | 5 | 0 | 0 |
 | **hiero-sdk-java** | 9 | 0 | 0 |
 | **hiero-sdk-js** | 21 | 3 | 0 |
-| **hiero-sdk-python** | 25 | 4 | 6 |
+| **hiero-sdk-python** | 26 | 4 | 6 |
 | **hiero-sdk-rust** | 9 | 0 | 0 |
 | **hiero-sdk-swift** | 2 | 0 | 0 |
 | **hiero-sdk-tck** | 8 | 2 | 0 |
